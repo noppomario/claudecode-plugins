@@ -32,6 +32,37 @@ export const DEFAULT_COLUMNS = 80
 const LAYOUT = { paddingY: 3 }
 
 /**
+ * A node's label and the brackets that shape it, for every shape the renderer
+ * draws: `[]`, `()`, `([])`, `(())`, `[[]]`, `{}`.
+ *
+ * The brackets must follow a node's id, which is what keeps a bracket inside
+ * a quoted label out of it: in `A["read [0]"]` the inner `[` follows a space,
+ * and a label holding a quote is passed over anyway.
+ */
+const LABEL = /(?<=[\p{L}\p{N}_])(\[\[|\(\(|\(\[|\{|\[|\()([^\]})\n"|]+)(\]\]|\)\)|\]\)|\}|\]|\))/gu
+
+/**
+ * Widens the space between a node's label and its border.
+ *
+ * The renderer leaves one column, which reads as cramped against a label of
+ * wide characters: each of them is two columns, so one column of air beside
+ * them is half as much as it looks beside Latin text. Two columns is the
+ * difference between a label in a box and a label wearing a box.
+ *
+ * Done to the source rather than the drawing: the renderer lays out what it
+ * is given, so the padding is measured and placed by the same code that
+ * places everything else. Rewriting the drawing afterwards would move one
+ * line and leave the rest where they were.
+ *
+ * Edge labels get nothing, because the renderer trims them: `|success|` and
+ * `| success |` draw the same, flush against the box and the arrowhead.
+ *
+ * @param {string} source the mermaid source
+ * @returns {string} the source with its node labels padded
+ */
+const padded = (source) => source.replace(LABEL, '$1  $2  $3')
+
+/**
  * East Asian Wide and Fullwidth: the characters a terminal draws in two cells.
  * Halfwidth katakana (U+FF61-FF9F) is outside it deliberately — it is narrow.
  */
@@ -63,7 +94,7 @@ export const displayWidth = (line) =>
 export function drawing(source, { columns, useAscii }) {
 	let text
 	try {
-		text = String(renderMermaidASCII(source, { colorMode: 'none', ...LAYOUT, useAscii }))
+		text = String(renderMermaidASCII(padded(source), { colorMode: 'none', ...LAYOUT, useAscii }))
 	} catch {
 		return null
 	}

@@ -77,3 +77,21 @@ describe('renderer', () => {
 		expect(drawn).not.toBeNull()
 	})
 })
+
+describe('label padding', () => {
+	test('a label is given room on both sides', async () => {
+		const drawn = drawing('flowchart LR\n  A[解析] --> B[描画]', { columns: 120, useAscii: false }) ?? ''
+
+		expect(drawn).toContain('  解析  ')
+	})
+
+	test('a bracket inside a quoted label is left alone', async () => {
+		// The padding follows a node's id, so `[0]` here is not a node's shape.
+		const drawn = drawing('flowchart LR\n  A["配列 [0] を読む"] --> B[次]', {
+			columns: 120,
+			useAscii: false,
+		}) ?? ''
+
+		expect(drawn).toContain('配列 [0] を読む')
+	})
+})
