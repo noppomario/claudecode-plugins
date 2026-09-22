@@ -22,8 +22,20 @@ place, on the terminal.
 ```
 
 A mod: it hooks `ui.render`, so the drawing is on screen only. The transcript
-and what Claude reads keep the fence, nothing is sent to the model, and
-nothing costs a token.
+and what Claude reads keep the fence.
+
+## Why the fence and not the diagram
+
+Drawing a diagram out of characters means laying it out in two dimensions and
+counting display columns. A model counts characters, and a label in Japanese
+or any other wide script takes two columns per character, so a hand-drawn box
+comes out crooked — the misalignment that makes a diagram unreadable.
+
+So the mod also tells the model, once per conversation, to write diagrams as
+mermaid fences and not to hand-draw them. The arithmetic then belongs to code
+that measures every grapheme before placing anything. The guidance is added
+only where the drawing happens: a session that draws nowhere is told nothing,
+since a fence nothing draws would be worse than a crooked box.
 
 ## The renderer
 

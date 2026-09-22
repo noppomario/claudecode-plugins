@@ -5,6 +5,31 @@ import { withDiagrams } from './renderer.mjs'
 /** Only a message holding a closed mermaid fence is worth redrawing. */
 const FENCE = /^ {0,3}(?:`{3,}|~{3,})[ \t]*mermaid[ \t\r]*$/im
 
+/** The name the guidance renders under in the conversation's context. */
+const BLOCK = 'mermaidDiagrams'
+
+/**
+ * What the model is told, once, at the top of a conversation.
+ *
+ * Drawing a diagram out of characters means laying it out in two dimensions
+ * and counting display columns, and a model counts characters: a label of
+ * Japanese or any other wide script takes two columns each and the box comes
+ * out crooked. A mermaid fence hands that arithmetic to this plugin, which
+ * measures every grapheme before it places anything.
+ */
+const GUIDANCE = `Diagrams in your replies are drawn for you. A \`\`\`mermaid fence is laid out and
+drawn on screen as box-drawing text at the terminal's width, by a plugin, after you
+write it. The person sees the drawing; the fence itself is what you wrote.
+
+So when a reply calls for a diagram - a flow, a sequence, a state machine, a shape of
+a system - write it as a \`\`\`mermaid fence and let it be drawn. flowchart (graph) and
+sequenceDiagram are the kinds that draw; any other kind shows its source instead.
+
+Do not draw a diagram yourself out of box-drawing or ASCII characters. Laying one out
+means counting display columns rather than characters, and a label in a wide script
+takes two columns per character, so a hand-drawn box comes out crooked. Prose, lists
+and tables are unaffected: this is about diagrams alone.`
+
 /** The width to lay out into where the surface has not measured one. */
 const DEFAULT_COLUMNS = 80
 
@@ -54,6 +79,19 @@ function remember(drawn: Map<string, string>, key: string, text: string) {
  */
 export function register(on: On) {
 	const drawn = new Map<string, string>()
+	let isTerminal = false
+
+	on('session.start', ($, e, next) => {
+		isTerminal = e.surface === 'terminal'
+		return next(e)
+	})
+
+	// Only where the drawing happens: telling the model to write a fence that
+	// nothing draws would trade a crooked diagram for an undrawn one.
+	on('prompt.context', ($, e, next) => {
+		if (!isTerminal) return next(e)
+		return next({ ...e, blocks: [...e.blocks, { name: BLOCK, text: GUIDANCE }] })
+	})
 
 	on(
 		'ui.render',
@@ -61,7 +99,9 @@ export function register(on: On) {
 		($, e, next) => {
 			const columns = e.viewport?.columns ?? DEFAULT_COLUMNS
 			const key = `${columns}\n${e.props.text}`
-			const text = drawn.get(key) ?? withDiagrams(e.props.text, columns)
+			const text = drawn.get(key) ?? withDiagrams(e.props.text, columns, (outcome) =>
+				$.ui.log(`[mermaid] ${outcome} at ${columns} columns`, { to: 'debug' }),
+			)
 
 			remember(drawn, key, text)
 
