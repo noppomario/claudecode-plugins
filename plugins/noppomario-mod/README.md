@@ -40,7 +40,7 @@ committed. Rebuild after changing the pinned version:
 
 ```sh
 npm install
-npm run build
+npm run renderers
 ```
 
 The SVG bundle is over the 1,048,576 bytes a hooks module will read, so

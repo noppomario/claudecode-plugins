@@ -35,7 +35,7 @@ claude plugin install noppomario-mod@noppo-claudecode-plugins
 
 ```sh
 npm install
-npm run build   # rebuilds the committed renderer bundles
+npm run renderers   # rebuilds the committed renderer bundles
 npm run check
 CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/noppomario-mod
 ```
