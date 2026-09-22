@@ -12,7 +12,7 @@
 
 import { build } from 'esbuild'
 import { readFileSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { basename, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -45,8 +45,14 @@ for (const { exports, from, file } of BUNDLES) {
 		outfile: out,
 	})
 
-	notices(result.metafile, resolve(OUT, `${file.replace(/\.mjs$/, '')}.LICENSE.md`))
+	const licences = resolve(OUT, `${file.replace(/\.mjs$/, '')}.LICENSE.md`)
+	const { count, kinds, missing } = notices(result.metafile, licences)
+
 	process.stdout.write(`${String(statSync(out).size).padStart(9)}  ${file}\n`)
+	process.stdout.write(`           ${basename(licences)}: ${count} packages, ${kinds.join(', ')}\n`)
+	for (const name of missing) {
+		process.stdout.write(`           no licence file in ${name} — check it by hand\n`)
+	}
 }
 
 /**
@@ -58,8 +64,11 @@ for (const { exports, from, file } of BUNDLES) {
  *
  * @param {{ inputs: Record<string, unknown> }} metafile the build's inputs
  * @param {string} out where to write
+ * @returns {{ count: number, kinds: string[], missing: string[] }} what it wrote
  */
 function notices(metafile, out) {
+	const kinds = new Set()
+	const missing = []
 	const names = new Set()
 	for (const input of Object.keys(metafile.inputs)) {
 		const match = input.match(/node_modules\/((?:@[^/]+\/)?[^/]+)/)
@@ -79,6 +88,8 @@ function notices(metafile, out) {
 					return false
 				}
 			})
+		kinds.add(license ?? 'unstated')
+		if (file === undefined) missing.push(name)
 		const text = file === undefined ? '(no licence file in the package)' : readFileSync(file, 'utf8')
 		const fence = '`'.repeat(3)
 		return `## ${name} ${version} — ${license}\n\n${fence}text\n${text.trim()}\n${fence}\n`
@@ -102,4 +113,6 @@ function notices(metafile, out) {
 	].join('\n')
 
 	writeFileSync(out, `${header}\n${sections.join('\n')}`)
+
+	return { count: names.size, kinds: [...kinds].sort(), missing }
 }
