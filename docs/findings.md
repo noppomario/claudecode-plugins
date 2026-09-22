@@ -138,6 +138,35 @@ must be literals and not variables:
 `claude plugin validate` prints what it read, which is the quickest way to
 see that a matcher resolved.
 
+## A terminal protects a drawing; a webview does not
+
+Box-drawing characters are East Asian Ambiguous, so how wide one is depends
+on the font. A drawing made of them survives a terminal anyway, for two
+reasons that have nothing to do with configuration:
+
+- A terminal places every character by cell. A glyph wider than its cell is
+  clipped or squashed; it never moves its neighbours.
+- VS Code's terminal draws U+2500-U+257F, block elements, Braille and
+  Powerline glyphs itself rather than taking them from the font
+  (`terminal.integrated.customGlyphs`, on by default). The lines never come
+  from the font at all.
+
+A webview has neither. It lays text out by advance width, so a CJK monospace
+font -- which `monospace` resolves to on a machine with Noto installed --
+gives those characters two columns where the renderer counted on one, and
+every row after the first wide glyph shifts.
+
+Measured in `Noto Sans Mono CJK JP`, per 1000 units of em: `A` 500, and
+`─ │ ┌ ◇ ▼ ▶ 開` all 1000.
+
+So the terminal draws with box characters and the panel draws in ASCII, which
+is one column in every monospace font. The alternative for the panel was
+asking for `editor.fontFamily` to name a font with narrow glyphs for them,
+which is a plugin that does not work until it is configured.
+
+`useAscii` is also not quite ASCII: a state diagram's end marker comes out as
+U+2016 in that mode, which is ambiguous-width and shifts its row.
+
 ## Claude Code ships a gated mermaid mod, and it is not the whole answer
 
 Build 2.1.278 carries a built-in plugin named `mermaid`:

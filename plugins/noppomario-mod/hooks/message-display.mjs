@@ -7,13 +7,20 @@
 // replaces the displayed text without touching the transcript or what the
 // model reads.
 //
-// Box-drawing characters are East Asian Ambiguous, so a webview takes its
-// font's word for how wide they are: in a CJK monospace font they are two
-// columns where the renderer counted on one, and every row shifts. They draw
-// square where the code font has narrow glyphs for them, which on this
-// surface means `editor.fontFamily` naming one -- Adwaita Mono, say. Set
-// `useAscii` below to true for a drawing that needs no such agreement, at
-// the price of `<--->` where a diamond would be.
+// It draws in ASCII, where the terminal hook draws with box-drawing
+// characters, and the difference is not taste.
+//
+// A terminal is a grid: it places every character by cell, so a glyph wider
+// than its cell is clipped and its neighbours stay put. VS Code's terminal
+// goes further and draws U+2500-U+257F itself, from `customGlyphs`, so the
+// lines never come from the font at all.
+//
+// A webview has neither. It lays text out by advance width, and box-drawing
+// characters are East Asian Ambiguous: a CJK monospace font gives them two
+// columns where the renderer counted on one, and every row after shifts. The
+// only way to draw lines here is to name a font that has narrow glyphs for
+// them in `editor.fontFamily` -- which is a plugin asking to be configured
+// before it works. ASCII is one column in every monospace font.
 //
 // It stands down wherever a surface is drawing: the hooks module sets the
 // variable below on `session.start` and `session.attach`, and the engine
@@ -47,7 +54,7 @@ if (typeof delta !== 'string' || delta === '') process.exit(0)
 
 // The event hands over the lines newly ready to draw, not the whole message,
 // so a fence still streaming has no closing ticks yet and is left alone.
-const text = withDrawings(delta, { columns: SCROLLS, useAscii: false })
+const text = withDrawings(delta, { columns: SCROLLS, useAscii: true })
 
 if (text !== delta) {
 	process.stdout.write(

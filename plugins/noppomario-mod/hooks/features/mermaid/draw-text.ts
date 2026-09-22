@@ -40,12 +40,12 @@ function remember(drawn: Map<string, string>, key: string, text: string) {
  * and are served by `draw-svg`. A fence that does not parse or does not fit
  * the width keeps its source.
  *
- * It draws with box-drawing characters. They are East Asian Ambiguous, so
- * whether one is a column or two is the font's to decide and the terminal's
- * to guess, and a terminal whose font draws them wide takes the drawing
- * apart. That is a font to name once (Adwaita Mono has narrow glyphs for all
- * of them) in exchange for lines instead of `+-|`; `useAscii: true` below
- * needs no such agreement and gives `<--->` where a diamond would be.
+ * It draws with box-drawing characters, which a terminal can be trusted
+ * with: it places every character by cell, so a glyph wider than its cell is
+ * clipped rather than allowed to move its neighbours, and VS Code's terminal
+ * draws U+2500-U+257F itself rather than taking it from the font. A webview
+ * has neither protection, which is why `hooks/message-display.mjs` draws the
+ * same diagrams in ASCII.
  *
  * @param on the engine's registrar
  */
