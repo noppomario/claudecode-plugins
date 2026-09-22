@@ -1,6 +1,6 @@
 {
   "name": "ui-surface-probe",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Diagnostic mod for the ui.render contract: marks every AssistantMessage it is allowed to rewrite with the surface that drew it, and draws an Svg element on request, so an author can see which surfaces a host actually raises and renders.",
   "author": {
     "name": "noppomario",
