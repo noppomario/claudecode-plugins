@@ -1,17 +1,10 @@
 import type { On } from 'claude-code'
 
-/** The name the guidance renders under in the conversation's context. */
 const BLOCK = 'mermaidDiagrams'
 
-/**
- * What the model is told, once, at the top of a conversation.
- *
- * Drawing a diagram out of characters means laying it out in two dimensions
- * and counting display columns, and a model counts characters: a label of
- * Japanese or any other wide script takes two columns each and the box comes
- * out crooked. A mermaid fence hands that arithmetic to this plugin, which
- * measures every grapheme before it places anything.
- */
+// Laying a diagram out means counting display columns, and a model counts
+// characters: a label in a wide script is two columns per character and the
+// box comes out crooked. A fence hands that arithmetic to the plugin.
 const GUIDANCE = `Diagrams in your replies are drawn for you. A \`\`\`mermaid fence is laid out and
 drawn on screen for the person, by a plugin, after you
 write it. The person sees the drawing; the fence itself is what you wrote.
@@ -27,11 +20,8 @@ takes two columns per character, so a hand-drawn box comes out crooked. Prose, l
 and tables are unaffected: this is about diagrams alone.`
 
 /**
- * Adds the guidance to the conversation's first message.
- *
- * Unconditionally: every session draws now. A terminal and a surface with
- * `Svg` draw through `ui.render`, and one that draws nowhere is covered by
- * the MessageDisplay fallback.
+ * Adds the guidance to the conversation's first message, unconditionally:
+ * every session draws, one way or another.
  *
  * @param on the engine's registrar
  */

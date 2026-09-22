@@ -2,31 +2,21 @@ import type { BoxProps, ElementConstructor, MarkdownProps, On, RenderElement, Sv
 
 import { FENCE, HAS_FENCE } from './render.mjs'
 
-/**
- * The child that draws, relative to this file.
- *
- * The renderer carries a layout engine and its bundle is 1.6MB, over the
- * 1,048,576 bytes a hooks module will read. So it is not imported here: a
- * child process imports it and writes the markup back. The limit is on what
- * the module graph reads, not on what a process the plugin starts may open.
- */
+// The renderer's bundle is 1.6MB, over the 1,048,576 bytes a hooks module
+// will read, so a child process imports it instead. The limit is on what the
+// module graph reads, not on what a process the plugin starts may open.
 const CHILD = new URL('../../render-svg.mjs', import.meta.url).pathname
 
-/**
- * A font the markup can count on. Naming one also drops the webfont import
- * the renderer would otherwise write: an SVG drawn as an image loads nothing
- * from outside itself, so a link to a font on the network is markup that
- * measures one thing and draws another.
- */
+// Naming a font also drops the webfont import the renderer would write. An
+// SVG drawn as an image loads nothing from outside itself, so a link to a
+// font on the network is markup that measures one thing and draws another.
 const FONT = 'system-ui'
 
-/** Palettes for the two halves of the engine's theme setting. */
 const PALETTE = {
 	dark: { bg: '#1e1e1e', fg: '#d4d4d4', line: '#808080', accent: '#4ec9b0' },
 	light: { bg: '#ffffff', fg: '#24292f', line: '#6e7781', accent: '#0550ae' },
 }
 
-/** How many drawings one session keeps, by source and palette. */
 const MAX_ENTRIES = 32
 
 /** The elements this draws with; every surface that has `Svg` has these. */
@@ -36,23 +26,12 @@ type Table = {
 	Svg: ElementConstructor<SvgProps>
 }
 
-// What a closure would hold. The engine wants each hook declared where it can
-// read it, so the hooks stay small and the state lives here; the module
-// reloads with the plugin and this resets with it.
+// What a closure would hold: the engine wants each hook declared where it can
+// read it, so the hooks stay small. Resets when the module reloads.
 const drawn = new Map<string, string>()
 let palette: keyof typeof PALETTE | null = null
 
-/**
- * Builds the tree for one reply: a drawing per fence, markdown for the prose
- * between them.
- *
- * A fence that throws keeps its source, carried by the markdown around it.
- *
- * @param table the surface's elements
- * @param text the reply's markdown
- * @param svgOf draws one source, or answers null
- * @returns the tree, or null when nothing drew and the chain should go on
- */
+/** A drawing per fence, markdown for the prose between; null if none drew. */
 async function treeOf(table: Table, text: string, draw: (source: string) => Promise<string | null>) {
 	const children: RenderElement[] = []
 	let read = 0
@@ -75,17 +54,17 @@ async function treeOf(table: Table, text: string, draw: (source: string) => Prom
 	return table.Box({ flexDirection: 'column', gap: 1, children })
 }
 
-/**
- * Draws one source, remembering it by source and palette.
- *
- * @param $ the engine
- * @param source the mermaid source
- * @returns the markup, or null when it did not draw
- */
-async function svgOf(
-	$: { process: { run: (argv: readonly string[], init?: { stdin?: string }) => Promise<{ exitCode: number; stdout: string }> } },
-	source: string,
-) {
+type Runner = {
+	process: {
+		run: (
+			argv: readonly string[],
+			init?: { stdin?: string },
+		) => Promise<{ exitCode: number; stdout: string }>
+	}
+}
+
+/** Draws one source in the child, remembering it by source and palette. */
+async function svgOf($: Runner, source: string) {
 	const key = `${palette}\n${source}`
 	const known = drawn.get(key)
 	if (known !== undefined) return known
@@ -102,13 +81,8 @@ async function svgOf(
 	return stdout
 }
 
-/**
- * What the drawing says, for a reader that cannot see it. A surface without
- * the element draws nothing else of it, so this carries the diagram itself.
- *
- * @param source the mermaid source
- * @returns a one-line description
- */
+// A surface without the element draws nothing else of it, so the alt carries
+// the diagram itself.
 function altOf(source: string) {
 	const kind = source.trim().split(/\s|\n/)[0] ?? 'diagram'
 	const labels = [...source.matchAll(/[[({]"?([^\]"})|]+)"?[\])}]/g)].map(([, label]) => label)
@@ -123,8 +97,8 @@ function altOf(source: string) {
  * agent as a stream-json client, where the engine draws nowhere — so this
  * sits dormant and starts working the day a client attaches, unchanged.
  *
- * The three registrations are written out because the engine reads a matcher
- * off the source, where a loop variable would not resolve to a surface.
+ * Written out per surface: the engine reads a matcher off the source, where
+ * a loop variable would not resolve to a surface.
  *
  * @param on the engine's registrar
  */
@@ -155,16 +129,10 @@ export function register(on: On) {
 	})
 }
 
-/**
- * Reads the engine's theme once and keeps the half it names.
- *
- * @param $ the engine
- */
+/** Reads the engine's theme once; a failed read is no reason not to draw. */
 async function paletteOf($: { config: { list: () => Promise<readonly { key: string; value: unknown }[]> } }) {
 	if (palette !== null) return
 
-	// A settings read that fails is no reason not to draw; dark is the default
-	// Claude Code ships with.
 	const rows = await $.config.list().catch(() => [])
 	const theme = rows.find((row) => row.key === 'theme')
 	palette = String(theme?.value ?? 'dark').startsWith('light') ? 'light' : 'dark'

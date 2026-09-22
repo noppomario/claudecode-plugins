@@ -2,22 +2,12 @@ import type { On } from 'claude-code'
 
 import { DEFAULT_COLUMNS, HAS_FENCE, withDrawings } from './render.mjs'
 
-/** What one session keeps of what it has already drawn. */
 const MAX_ENTRIES = 32
 const MAX_CHARS = 250_000
 const MAX_ENTRY_CHARS = 50_000
 
-/**
- * Remembers one drawing, oldest dropped first.
- *
- * A message is re-rendered on every frame and on every change of width, and
- * laying a diagram out again for a drawing that has not changed is the one
- * cost worth avoiding here.
- *
- * @param drawn the cache
- * @param key the message's text and the width it was drawn at
- * @param text the drawing
- */
+// A message re-renders on every frame and every change of width, so laying
+// an unchanged diagram out again is the one cost worth avoiding. Oldest out.
 function remember(drawn: Map<string, string>, key: string, text: string) {
 	drawn.delete(key)
 	if (key.length + text.length > MAX_ENTRY_CHARS) return
@@ -34,18 +24,14 @@ function remember(drawn: Map<string, string>, key: string, text: string) {
 }
 
 /**
- * Draws the mermaid fences of a reply as text, where they stand.
+ * Draws a reply's mermaid fences as text, where they stand. The terminal
+ * alone: the other surfaces carry `Svg` and go through `draw-svg`.
  *
- * The terminal is the only surface that takes this: the others carry `Svg`
- * and are served by `draw-svg`. A fence that does not parse or does not fit
- * the width keeps its source.
- *
- * It draws with box-drawing characters, which a terminal can be trusted
- * with: it places every character by cell, so a glyph wider than its cell is
- * clipped rather than allowed to move its neighbours, and VS Code's terminal
- * draws U+2500-U+257F itself rather than taking it from the font. A webview
- * has neither protection, which is why `hooks/message-display.mjs` draws the
- * same diagrams in ASCII.
+ * Box-drawing characters are safe here. A terminal places every character by
+ * cell, so a glyph wider than its cell is clipped rather than allowed to move
+ * its neighbours, and VS Code draws U+2500-U+257F itself rather than from the
+ * font. A webview has neither protection, which is why `message-display.mjs`
+ * draws the same diagrams in ASCII.
  *
  * @param on the engine's registrar
  */

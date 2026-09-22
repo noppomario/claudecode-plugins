@@ -1,115 +1,49 @@
-// Turning the mermaid fences of a reply into drawings.
-//
-// Written as .mjs so both sides can import it: the hooks module, which the
-// engine loads as TypeScript, and hooks/message-display.mjs, which runs as an
-// ordinary Node process where no engine exists.
+// .mjs so both sides can import it: the hooks module, which the engine loads
+// as TypeScript, and hooks/message-display.mjs, which runs as a Node process.
 
 import { renderMermaidASCII } from './vendor/zombie-text.mjs'
 
-/** A closed mermaid fence and the source inside it. */
+/** A closed mermaid fence: indent, ticks, source. */
 export const FENCE = /^([ \t]{0,3})(`{3,}|~{3,})[ \t]*mermaid[^\n]*\n([\s\S]*?)\n[ \t]*\2[ \t]*$/gm
 
-/** A reply with no fence never needs rendering; this is the cheap test. */
 export const HAS_FENCE = /^[ \t]{0,3}(?:`{3,}|~{3,})[ \t]*mermaid[ \t\r]*$/im
 
-/** The width to lay out into where the surface has not measured one. */
 export const DEFAULT_COLUMNS = 80
 
-/**
- * How tightly to draw.
- *
- * A transcript is read by scrolling, so height is what a diagram costs. The
- * renderer's own spacing leaves five rows between ranks; three is the least
- * that still puts an edge's label below the box it leaves, rather than on its
- * border.
- *
- * The padding inside a box is left alone. Taking it away saves two rows per
- * box and looks like a bargain on a small diagram, but on a dense one the
- * renderer then routes an edge straight through a label — `Failed` comes out
- * as `Fai|ed`. A drawing with a line through a word is the thing this feature
- * exists to prevent, so the rows are worth their price.
- */
+// The renderer leaves five rows between ranks. Three is the least that still
+// puts an edge's label below its box rather than on the border. Box padding
+// is left alone: dropping it saves two rows per box but lets edges route
+// through labels, and `Fai|ed` is what this feature exists to prevent.
 const LAYOUT = { paddingY: 3 }
 
-/**
- * A node's label and the brackets that shape it, for every shape the renderer
- * draws: `[]`, `()`, `([])`, `(())`, `[[]]`, `{}`.
- *
- * The brackets must follow a node's id, which is what keeps a bracket inside
- * a quoted label out of it: in `A["read [0]"]` the inner `[` follows a space,
- * and a label holding a quote is passed over anyway.
- */
+/** A node's shape and label: `[]`, `()`, `([])`, `(())`, `[[]]`, `{}`. */
 const LABEL = /(?<=[\p{L}\p{N}_])(\[\[|\(\(|\(\[|\{|\[|\()([^\]})\n"|]+)(\]\]|\)\)|\]\)|\}|\]|\))/gu
 
-/**
- * Widens the space between a node's label and its border.
- *
- * The renderer leaves one column, which reads as cramped against a label of
- * wide characters: each of them is two columns, so one column of air beside
- * them is half as much as it looks beside Latin text. Two columns is the
- * difference between a label in a box and a label wearing a box.
- *
- * Done to the source rather than the drawing: the renderer lays out what it
- * is given, so the padding is measured and placed by the same code that
- * places everything else. Rewriting the drawing afterwards would move one
- * line and leave the rest where they were.
- *
- * Edge labels get nothing, because the renderer trims them: `|success|` and
- * `| success |` draw the same, flush against the box and the arrowhead.
- *
- * @param {string} source the mermaid source
- * @returns {string} the source with its node labels padded
- */
+// Widens a label's margin from one column to two, which a wide script needs:
+// its characters are two columns each. Done to the source, so the renderer
+// measures the padding itself; inserting it into the drawing would move one
+// line and leave the rest. Edge labels get none — the renderer trims them.
 const padded = (source) => source.replace(LABEL, '$1  $2  $3')
 
-/**
- * Characters `useAscii` leaves behind, and what stands in for them.
- *
- * The mode is meant to emit nothing outside ASCII, and a state diagram's end
- * marker comes out as `\u2016` anyway. That character is East Asian
- * Ambiguous, so a webview's CJK monospace font draws it two columns wide
- * while the renderer counted on one, and the row it sits in shifts.
- *
- * One character for one character, so nothing moves: a substitution is safe
- * here in a way that inserting a space never is.
- */
-const NOT_ASCII = new Map([['\u2016', '|']])
+// `useAscii` leaves U+2016 in a state diagram's end marker. It is East Asian
+// Ambiguous, so a CJK font draws it two columns wide and shifts its row.
+// One character for one, so nothing moves.
+const asciiOnly = (drawn) => drawn.replace(/‖/gu, '|')
 
-/**
- * @param {string} drawn a drawing made with `useAscii`
- * @returns {string} the same drawing, in ASCII alone
- */
-const asciiOnly = (drawn) =>
-	drawn.replace(/[^\x00-\x7F]/gu, (ch) => NOT_ASCII.get(ch) ?? ch)
-
-/**
- * East Asian Wide and Fullwidth: the characters a terminal draws in two cells.
- * Halfwidth katakana (U+FF61-FF9F) is outside it deliberately — it is narrow.
- */
+/** East Asian Wide and Fullwidth; halfwidth katakana is narrow, so excluded. */
 const WIDE =
-	/[\u1100-\u115F\u2329\u232A\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA000-\uA4CF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/
+	/[ᄀ-ᅟ〈〉⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏ꥠ-꥿가-힣豈-﫿︐-︙︰-﹯＀-｠￠-￦]/
 
-/**
- * @param {string} line one line of a drawing
- * @returns {number} the columns it occupies
- */
 export const displayWidth = (line) =>
 	[...line].reduce((columns, ch) => columns + (WIDE.test(ch) ? 2 : 1), 0)
 
 /**
- * Draws one diagram as text.
- *
- * `useAscii` is the whole difference between the surfaces. A terminal places
- * box-drawing characters in one cell each, so `─│┌` read better there. A
- * webview takes its font's word for it, and in a CJK monospace font those
- * characters are two cells wide while the renderer counts them as one, so the
- * box comes apart: `- | +` are the only characters whose width no font
- * argues with.
+ * Draws one diagram as text, or answers null to keep the source: it did not
+ * parse, or it is wider than the room, where wrapping would break it.
  *
  * @param {string} source the diagram, without its fence
  * @param {{ columns: number, useAscii: boolean }} options
- * @returns {string | null} the drawing, or null to keep the source: it did not
- *          parse, or it does not fit the width, where wrapping would break it
+ * @returns {string | null}
  */
 export function drawing(source, { columns, useAscii }) {
 	let text
@@ -123,6 +57,7 @@ export function drawing(source, { columns, useAscii }) {
 		.split('\n')
 		.map((line) => line.replace(/[ \t]+$/, ''))
 	while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
+
 	if (lines.length === 0) return null
 	if (lines.some((line) => displayWidth(line) > columns)) return null
 
@@ -130,14 +65,12 @@ export function drawing(source, { columns, useAscii }) {
 }
 
 /**
- * Replaces every mermaid fence of a reply with its drawing.
- *
- * A fence that does not draw keeps its source, so a failure shows the
- * diagram's text rather than nothing.
+ * Replaces every fence with its drawing. One that does not draw keeps its
+ * source, so a failure shows the diagram's text rather than nothing.
  *
  * @param {string} text the reply's markdown
  * @param {{ columns: number, useAscii: boolean }} options
- * @returns {string} the rewritten markdown, or `text` when nothing drew
+ * @returns {string}
  */
 export function withDrawings(text, options) {
 	if (!HAS_FENCE.test(text)) return text
@@ -146,14 +79,4 @@ export function withDrawings(text, options) {
 		const drawn = drawing(source, options)
 		return drawn === null ? fence : `${indent}${ticks}\n${drawn}\n${indent}${ticks}`
 	})
-}
-
-/**
- * Every mermaid source a reply holds, in the order they appear.
- *
- * @param {string} text the reply's markdown
- * @returns {string[]} the sources, without their fences
- */
-export function sourcesOf(text) {
-	return [...text.matchAll(FENCE)].map(([, , , source]) => source)
 }

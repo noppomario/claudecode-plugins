@@ -1,40 +1,54 @@
 # Findings
 
-What was learned about Claude Code's plugin and rendering contracts while
-building this repository, against build 2.1.278. None of it is in the
-documentation; most of it cost an experiment to establish. It is written down
-because the next piece of work will ask the same questions.
+What Claude Code's plugin and rendering contracts turned out to be, against
+build 2.1.278. None of it is documented and most of it cost an experiment.
+The API is early access; re-check before relying on any of it.
 
-The API is early access and moves between releases. Re-check anything here
-before relying on it.
+## The hooks loader
 
-## A plugin may name exactly one hooks module
-
-`hooks/hooks.json` takes a `modules` array, but a second entry is refused:
+**One hooks module per plugin.** A second entry in `modules` is refused:
 
 ```text
 modules: hooks.json `modules` names one hooks module per plugin; a second entry is refused
 ```
 
-Several features in one plugin therefore compose inside one `register()`,
-importing sibling files by relative path. That is what
-`plugins/noppomario-mod/hooks/register.ts` does.
+So several features compose inside one `register()`, importing siblings by
+relative path.
 
-## Two plugins that rewrite the same render site collide
+**No file over 1,048,576 bytes**, for the module and everything it imports:
 
-A diagnostic plugin that rewrote `AssistantMessage`'s `props.text` silently
-discarded the mermaid mod's drawing at the same site. Only the probe's rewrite
-appeared; no error was reported anywhere. The engine reports rewrite
-collisions on other events as last-registered-wins
-([#88338](https://github.com/anthropics/claude-code/issues/88338)), and this
-behaved the same way.
+```text
+<module>: <file> is over 1048576 bytes and was not read
+```
 
-Practical consequence: features that touch one site belong in one plugin,
-where their order is the author's to choose.
+The SVG renderer's bundle is 1.6MB (1.4MB of it elkjs), so it runs in a child
+process started with `$.process.run`. The limit is on what the module graph
+reads, not on what a process the plugin starts may open.
+
+**Relative dynamic `import()` works**, and `import.meta.url` is a real file
+URL — which is how a hook finds a sibling script to run.
+
+**Several things must be literals**, because the loader reads the source to
+list what a module touches:
+
+- `$.env.set("NAME", …)` — a variable name is refused, naming the variable
+- a matcher's `surface` — a loop over `['vscode', 'desktop'] as const`
+  registers `surface=surface`, which matches nothing
+- the hook — a function declared at the top of its file, a const bound to one
+  there, an import, or written inline at the `on` call. A const inside
+  `register` is refused
+
+`claude plugin validate` prints what it read.
+
+**Two plugins that rewrite the same render site collide.** A probe rewriting
+`AssistantMessage`'s `props.text` silently discarded the mermaid drawing at
+the same site, with no error anywhere. Same shape as
+[#88338](https://github.com/anthropics/claude-code/issues/88338). Features
+that touch one site belong in one plugin, where their order is the author's.
 
 ## The VS Code extension never raises `ui.render`
 
-The extension launches the agent as a stream-json client:
+It launches the agent as a stream-json client:
 
 ```text
 claude --output-format stream-json --input-format stream-json --verbose
@@ -42,132 +56,78 @@ claude --output-format stream-json --input-format stream-json --verbose
        --debug --debug-to-stderr --setting-sources=user,project,local
 ```
 
-That is the mode the types describe as drawing nowhere. A `session.start` hook
-in a VS Code session reports:
+which is the mode the types describe as drawing nowhere. `session.start`
+there reports `surface=null interactive=false`. The `Elements` table does
+declare a `vscode` surface carrying `Svg`, and `SvgProps` says "the desktop
+and the editor draw it as an image", but nothing in the extension reaches it.
 
-```text
-session.start surface=null interactive=false
-```
+## `MessageDisplay` fills that gap, and its text field is `delta`
 
-So no `ui.render` event is ever raised there, and the panel renders the stream
-itself. The `Elements` table does declare a `vscode` surface carrying `Svg`,
-and `SvgProps` says "the desktop and the editor draw it as an image", but
-nothing reaches it from the extension as it ships.
-
-## `MessageDisplay` is honoured in that mode, and its text field is `delta`
-
-The event's input is not `message_text`, whatever the blog posts say. Captured
-from a live run:
+Not `message_text`, whatever the blog posts say. Captured live:
 
 ```json
 {"index":0,"final":true,"delta":"hello world","message_id":"6dd05a61-..."}
 ```
 
-The full set of fields: `cwd`, `delta`, `final`, `hook_event_name`, `index`,
-`message_id`, `prompt_id`, `scratchpad_dir`, `session_id`, `transcript_path`,
-`turn_id`. `delta` is the batch of newly completed lines this call covers, not
-the whole message.
+Fields: `cwd`, `delta`, `final`, `hook_event_name`, `index`, `message_id`,
+`prompt_id`, `scratchpad_dir`, `session_id`, `transcript_path`, `turn_id`.
+`delta` is the batch of newly completed lines, not the whole message.
 
-Answering with `hookSpecificOutput.displayContent` replaces what is displayed.
-In stream-json mode the replacement lands on the completed `assistant`
-message; the `stream_event` deltas still carry the original, so under
-`--include-partial-messages` the original streams in and the replacement
-arrives when the message completes.
+`hookSpecificOutput.displayContent` replaces what is displayed. In stream-json
+mode it lands on the completed `assistant` message; the `stream_event` deltas
+still carry the original, so under `--include-partial-messages` the original
+streams in and the replacement arrives at the end.
 
-A plugin's `MessageDisplay` hook is declared under `hooks` in `hooks.json`,
-not `modules`: it is a classic command hook, not a function hook.
+It is a command hook, declared under `hooks` in `hooks.json`, not `modules`.
 
 ## What the VS Code panel's renderer accepts
 
-Measured by replacing a reply with a battery of candidates:
-
 | Candidate | Result |
 | --- | --- |
-| Markdown image, `file://` URL | `[Image]` placeholder |
-| Markdown image, `data:` URI | `[Image]` placeholder |
-| HTML `<img>` | drawn as its own markup |
-| Inline `<svg>` | drawn as its own markup |
+| Markdown image, `file://` or `data:` | `[Image]` placeholder |
+| HTML `<img>`, `<svg>`, `<details>` | drawn as its own markup |
 | `mermaid` fence | an ordinary code block |
-| HTML `<details>` | drawn as its own markup |
 | ANSI escape | the control characters, visibly |
 
-Markdown itself is parsed — headings, emphasis and code blocks all render. So
-the panel takes plain markdown text and nothing else. The image node is
-recognised and refused, which is
+Markdown itself is parsed. So: plain markdown text and nothing else. The image
+node is recognised and refused —
 [#79436](https://github.com/anthropics/claude-code/issues/79436) /
-[#95797](https://github.com/anthropics/claude-code/issues/95797); if that
-lands, the two image rows become viable with no other change.
-
-Box-drawing text does not survive there either: inside a code fence it comes
-out crooked, because the panel's font falls back for box-drawing glyphs and
-the fallback's advance width does not match the grid. The same text is exact
-in a terminal.
-
-## A hooks module reads no file over 1,048,576 bytes
-
-The module and everything it imports, each file:
-
-```text
-<module>: <file> is over 1048576 bytes and was not read
-```
-
-This decided where the SVG renderer runs. Its bundle is 1.6MB — 1.4MB of that
-is elkjs, the layout engine — so it cannot be imported at all. It runs in a
-child process the hook starts with `$.process.run` instead; the limit is on
-what the module graph reads, not on what a process the plugin starts may open.
-
-Two smaller findings from the same loader:
-
-- A relative dynamic `import()` **works**. A sibling `.mjs` loaded with
-  `await import('./late.mjs')` resolves at first call.
-- `import.meta.url` is a real file URL inside a hooks module, which is how a
-  hook finds a sibling script to run.
-
-## What the engine wants spelled out literally
-
-The loader reads a module's source to list what it touches, so several things
-must be literals and not variables:
-
-- `$.env.set("NAME", …)` — a variable name is refused, naming the variable
-- a matcher's `surface` — a loop over `['vscode', 'desktop'] as const`
-  registers `surface=surface`, which matches nothing
-- the hook itself — it must be a function declared at the top of its file, a
-  const bound to one there, an import, or written inline at the `on` call. A
-  const inside `register` is refused
-
-`claude plugin validate` prints what it read, which is the quickest way to
-see that a matcher resolved.
+[#95797](https://github.com/anthropics/claude-code/issues/95797) — and if that
+lands, the image rows become viable with no other change.
 
 ## A terminal protects a drawing; a webview does not
 
-Box-drawing characters are East Asian Ambiguous, so how wide one is depends
-on the font. A drawing made of them survives a terminal anyway, for two
-reasons that have nothing to do with configuration:
+Box-drawing characters are East Asian Ambiguous, so their width depends on the
+font. A drawing made of them survives a terminal anyway, for two reasons that
+owe nothing to configuration:
 
-- A terminal places every character by cell. A glyph wider than its cell is
-  clipped or squashed; it never moves its neighbours.
+- a terminal places every character by cell, so a glyph wider than its cell is
+  clipped and never moves its neighbours
 - VS Code's terminal draws U+2500-U+257F, block elements, Braille and
-  Powerline glyphs itself rather than taking them from the font
-  (`terminal.integrated.customGlyphs`, on by default). The lines never come
-  from the font at all.
+  Powerline itself rather than from the font
+  (`terminal.integrated.customGlyphs`, on by default)
 
-A webview has neither. It lays text out by advance width, so a CJK monospace
-font -- which `monospace` resolves to on a machine with Noto installed --
-gives those characters two columns where the renderer counted on one, and
-every row after the first wide glyph shifts.
+A webview has neither: it lays text out by advance width. Measured in
+`Noto Sans Mono CJK JP` — what `monospace` resolves to with Noto installed —
+per 1000 units of em: `A` 500, and `─ │ ┌ ◇ ▼ ▶ 開` all 1000. So every row
+after the first wide glyph shifts.
 
-Measured in `Noto Sans Mono CJK JP`, per 1000 units of em: `A` 500, and
-`─ │ ┌ ◇ ▼ ▶ 開` all 1000.
+Hence box characters on the terminal and ASCII in the panel. The alternative
+was asking for `editor.fontFamily`, which is a plugin that does not work until
+it is configured.
 
-So the terminal draws with box characters and the panel draws in ASCII, which
-is one column in every monospace font. The alternative for the panel was
-asking for `editor.fontFamily` to name a font with narrow glyphs for them,
-which is a plugin that does not work until it is configured.
+`useAscii` is not quite ASCII either: a state diagram's end marker comes out as
+U+2016, ambiguous-width, and shifts its row.
 
-`useAscii` is also not quite ASCII: a state diagram's end marker comes out as
-U+2016 in that mode, which is ambiguous-width and shifts its row.
+## Why hand-drawn diagrams come out crooked
 
-## Claude Code ships a gated mermaid mod, and it is not the whole answer
+A model pads by counting characters; a terminal places by counting display
+columns. A wide-script label is two columns per character, so a box padded to
+the right number of characters is the wrong number of columns wide. Nothing on
+the rendering side fixes it — the terminal draws faithfully what was written.
+The fix is to stop the model laying diagrams out by hand.
+
+## Claude Code ships a gated mermaid mod
 
 Build 2.1.278 carries a built-in plugin named `mermaid`:
 
@@ -178,72 +138,43 @@ var ce = "Mermaid diagrams in the terminal: flowcharts and sequence diagrams
           in a reply's mermaid code fences are drawn in place as box-drawing text"
 ```
 
-`Q4t()` is function hooks being enabled, `Sh()` is screen reader mode, and
-`tengu_mermaid_mod` is a server-side gate that defaults off. It is not in
-`anthropics/claude-code/mods`, not in the CHANGELOG, and not in the docs; the
-gate first appears in 2.1.277. `tengu_agents_md_mod` is the same shape and did
-ship, so this one plausibly will too.
+`Q4t()` is function hooks enabled, `Sh()` is screen reader mode, and
+`tengu_mermaid_mod` is a server-side gate defaulting off. It is not in
+`anthropics/claude-code/mods`, the CHANGELOG or the docs; the gate first
+appears in 2.1.277. `tengu_agents_md_mod` is the same shape and did ship.
 
-Its hooks module scans as `{hooks: ["ui.render"], calls: []}`: one hook, no
-calls on `$`. **It never tells the model anything.** It draws the fences the
-model chose to write, which is half of
-[#14375](https://github.com/anthropics/claude-code/issues/14375) — the half
-that does not address hand-drawn ASCII diagrams at all.
+Its module scans as `{hooks: ["ui.render"], calls: []}` — one hook, no calls on
+`$`. **It never tells the model anything.** It draws the fences the model chose
+to write, which is half of
+[#14375](https://github.com/anthropics/claude-code/issues/14375), and not the
+half about hand-drawn diagrams.
 
-The gate sits in `isAvailable`, which decides whether that plugin registers.
-It covers neither the renderer nor `ui.render`, so a plugin of one's own can
-call the same renderer today, which is what this repository did first — by
-carving the renderer out of the binary, since it is not published.
+The gate sits in `isAvailable`, which covers neither the renderer nor
+`ui.render`, so a plugin of one's own could call the same renderer — by
+carving it out of the binary, since it is not published. This repository did
+that first and no longer does.
 
-That is no longer how it works. `zombie-mermaid` is MIT, draws the same
-diagrams correctly for CJK, draws three kinds the built-in renderer does not
-(state, class, ER), does not refuse a labelled edge that converges, and emits
-SVG as well as text. It is a dependency rather than an act of archaeology.
+## The renderer in use, and the two it was chosen over
 
-## Why hand-drawn diagrams come out crooked
-
-A model pads by counting characters; a terminal places by counting display
-columns. A label in Japanese or any other wide script takes two columns per
-character, so a box padded to the right number of characters is the wrong
-number of columns wide, and the border misses the content by exactly the
-number of wide characters inside it.
-
-Nothing on the rendering side fixes this: the terminal draws faithfully what
-was written. The fix is either to stop the model laying diagrams out by hand,
-or to redraw what it wrote.
-
-The renderer measures every grapheme (`Intl.Segmenter` plus an East Asian
-Width table) before placing anything, so its boxes are exact. Box-drawing
-characters are East Asian Ambiguous, so a terminal configured to draw
-ambiguous characters at two columns would break them — but it would break
-every box equally, which makes the condition easy to spot.
-
-## Why the built-in renderer was left behind
-
-It refuses a labelled edge that converges:
+The built-in one refuses a labelled edge that converges:
 
 ```js
 if (c.some((d, m) => d !== "" && (h[m] ?? 0) > 1)) return
 ```
 
-`h` counts incoming edges per node and `c` holds one label per node, so two
-labels landing on one node would be drawn at the same column. It gives up on
-the whole diagram rather than draw it wrong. A `yes` and a `no` branch that
-rejoin is the commonest shape in a flowchart, so this fired often.
+One label slot per node, so two labels landing on one node would be drawn at
+the same column, and it gives up on the whole diagram. A `yes` and a `no`
+branch that rejoin is the commonest shape in a flowchart. It also draws only
+flowcharts and sequence diagrams, and only as text.
 
-It also draws only flowcharts and sequence diagrams, and only as text.
-
-## The library that replaced it, and the one it forked from
-
-`beautiful-mermaid` (11k stars) has the CJK bug this whole feature exists to
-avoid: its ASCII grid measures width in code points, so a Japanese label
-pushes the border out. Two issues report it
-([#119](https://github.com/lukilabs/beautiful-mermaid/issues/119),
-[#122](https://github.com/lukilabs/beautiful-mermaid/issues/122)) and a fix
-PR ([#128](https://github.com/lukilabs/beautiful-mermaid/pull/128)) has sat
-unmerged since June 2026. The repository has not been pushed since May.
+`beautiful-mermaid` (11k stars) has the CJK bug this feature exists to avoid:
+its ASCII grid measures width in code points. Reported in
+[#119](https://github.com/lukilabs/beautiful-mermaid/issues/119) and
+[#122](https://github.com/lukilabs/beautiful-mermaid/issues/122), with a fix
+PR ([#128](https://github.com/lukilabs/beautiful-mermaid/pull/128)) unmerged
+since June 2026 and no push since May.
 
 `zombie-mermaid` is a maintained fork that took the fix: it measures display
-width and writes a wide grapheme into two cells. Verified here — Japanese,
-mixed scripts, halfwidth katakana and ambiguous-width labels all come out as
-rectangles, in both box-drawing and ASCII mode.
+width and writes a wide grapheme into two cells. Verified here across
+Japanese, mixed scripts, halfwidth katakana and ambiguous-width labels, in
+both modes.

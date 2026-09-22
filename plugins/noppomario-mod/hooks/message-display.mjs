@@ -1,39 +1,23 @@
 #!/usr/bin/env node
-// Draws the mermaid fences of a reply where the engine draws nothing itself.
+// Draws a reply's mermaid fences where the engine draws nothing itself: the
+// VS Code panel, `claude -p`, the SDK. All run the agent as a stream-json
+// client, where `ui.render` is never raised and MessageDisplay is the only
+// way to change what is shown -- on screen alone, never the transcript.
 //
-// The VS Code extension runs the agent as a stream-json client, and so do
-// `claude -p` and the SDK: the engine has no surface, `ui.render` is never
-// raised, and the only way to change what is shown is MessageDisplay, which
-// replaces the displayed text without touching the transcript or what the
-// model reads.
+// In ASCII, where the terminal hook uses box-drawing characters. A webview
+// lays text out by advance width, and box-drawing characters are East Asian
+// Ambiguous: a CJK monospace font gives them two columns where the renderer
+// counted on one, and every row after shifts. Drawing lines here would mean
+// asking for `editor.fontFamily`, which is a plugin that does not work until
+// it is configured. ASCII is one column in every monospace font.
 //
-// It draws in ASCII, where the terminal hook draws with box-drawing
-// characters, and the difference is not taste.
-//
-// A terminal is a grid: it places every character by cell, so a glyph wider
-// than its cell is clipped and its neighbours stay put. VS Code's terminal
-// goes further and draws U+2500-U+257F itself, from `customGlyphs`, so the
-// lines never come from the font at all.
-//
-// A webview has neither. It lays text out by advance width, and box-drawing
-// characters are East Asian Ambiguous: a CJK monospace font gives them two
-// columns where the renderer counted on one, and every row after shifts. The
-// only way to draw lines here is to name a font that has narrow glyphs for
-// them in `editor.fontFamily` -- which is a plugin asking to be configured
-// before it works. ASCII is one column in every monospace font.
-//
-// It stands down wherever a surface is drawing: the hooks module sets the
-// variable below on `session.start` and `session.attach`, and the engine
-// starts this process after that.
+// It stands down where a surface is drawing: the hooks module sets the
+// variable below, and the engine starts this process after that.
 
 import { withDrawings } from './features/mermaid/render.mjs'
 
-/**
- * No width to respect. A terminal wraps a drawing that is too wide and ruins
- * it, so the terminal hook holds one to the viewport; the surfaces this hook
- * serves put a code block in a box that scrolls sideways, where a wide
- * diagram is a wide diagram and nothing breaks.
- */
+// No width to respect: a code block here scrolls sideways, where a terminal
+// would wrap the drawing and ruin it.
 const SCROLLS = Number.POSITIVE_INFINITY
 
 const DRAWS = 'NOPPOMARIO_MOD_DRAWS'
