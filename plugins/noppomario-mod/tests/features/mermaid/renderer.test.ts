@@ -26,7 +26,8 @@ describe('renderer', () => {
 			test(`a ${name} label draws a rectangle, useAscii ${useAscii}`, async () => {
 				const lines = drawing(chain(label), { columns: 120, useAscii })?.split('\n') ?? []
 
-				expect(lines.length).toBe(3)
+				// One rank, so every row of the drawing is one rectangle's width.
+				expect(lines.length).toBeGreaterThan(2)
 				expect(new Set(lines.map(displayWidth)).size).toBe(1)
 			})
 		}
@@ -44,6 +45,18 @@ describe('renderer', () => {
 
 	test('a kind the renderer does not know is kept as its source', async () => {
 		expect(drawing('not a diagram at all', { columns: 80, useAscii: false })).toBeNull()
+	})
+
+	test('a dense graph routes no edge through a label', async () => {
+		// Taking the padding out of a box saves rows and buys this: the renderer
+		// runs an edge across a label, and `Failed` comes out as `Fai|ed`.
+		const drawn =
+			drawing(
+				'flowchart LR\n  Failed -->|retry| InProgress\n  InProgress -->|fail| Failed\n  InProgress -->|complete| Done',
+				{ columns: 200, useAscii: true },
+			) ?? ''
+
+		expect(/[A-Za-z][|+][A-Za-z]/.test(drawn)).toBe(false)
 	})
 
 	test('a state diagram draws, which the previous renderer refused', async () => {

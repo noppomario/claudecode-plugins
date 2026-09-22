@@ -15,7 +15,15 @@
 // variable below on `session.start` and `session.attach`, and the engine
 // starts this process after that.
 
-import { DEFAULT_COLUMNS, withDrawings } from './features/mermaid/render.mjs'
+import { withDrawings } from './features/mermaid/render.mjs'
+
+/**
+ * No width to respect. A terminal wraps a drawing that is too wide and ruins
+ * it, so the terminal hook holds one to the viewport; the surfaces this hook
+ * serves put a code block in a box that scrolls sideways, where a wide
+ * diagram is a wide diagram and nothing breaks.
+ */
+const SCROLLS = Number.POSITIVE_INFINITY
 
 const DRAWS = 'NOPPOMARIO_MOD_DRAWS'
 
@@ -35,7 +43,7 @@ if (typeof delta !== 'string' || delta === '') process.exit(0)
 
 // The event hands over the lines newly ready to draw, not the whole message,
 // so a fence still streaming has no closing ticks yet and is left alone.
-const text = withDrawings(delta, { columns: DEFAULT_COLUMNS, useAscii: true })
+const text = withDrawings(delta, { columns: SCROLLS, useAscii: true })
 
 if (text !== delta) {
 	process.stdout.write(

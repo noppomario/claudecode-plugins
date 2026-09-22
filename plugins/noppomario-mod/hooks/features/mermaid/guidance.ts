@@ -17,8 +17,9 @@ drawn on screen for the person, by a plugin, after you
 write it. The person sees the drawing; the fence itself is what you wrote.
 
 So when a reply calls for a diagram - a flow, a sequence, a state machine, a shape of
-a system - write it as a \`\`\`mermaid fence and let it be drawn. flowchart (graph) and
-sequenceDiagram are the kinds that draw; any other kind shows its source instead.
+a system - write it as a \`\`\`mermaid fence and let it be drawn. flowchart (graph),
+sequenceDiagram, stateDiagram, classDiagram and erDiagram all draw; another kind, or
+one that does not parse, shows its source instead, which is no worse than a fence.
 
 Do not draw a diagram yourself out of box-drawing or ASCII characters. Laying one out
 means counting display columns rather than characters, and a label in a wide script

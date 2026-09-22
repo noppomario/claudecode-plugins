@@ -21,10 +21,15 @@ export const DEFAULT_COLUMNS = 80
  * A transcript is read by scrolling, so height is what a diagram costs. The
  * renderer's own spacing leaves five rows between ranks; three is the least
  * that still puts an edge's label below the box it leaves, rather than on its
- * border. `boxBorderPadding: 0` costs a label its breathing room but saves
- * two rows per box, which is the better trade at this size.
+ * border.
+ *
+ * The padding inside a box is left alone. Taking it away saves two rows per
+ * box and looks like a bargain on a small diagram, but on a dense one the
+ * renderer then routes an edge straight through a label — `Failed` comes out
+ * as `Fai|ed`. A drawing with a line through a word is the thing this feature
+ * exists to prevent, so the rows are worth their price.
  */
-const LAYOUT = { boxBorderPadding: 0, paddingY: 3 }
+const LAYOUT = { paddingY: 3 }
 
 /**
  * East Asian Wide and Fullwidth: the characters a terminal draws in two cells.

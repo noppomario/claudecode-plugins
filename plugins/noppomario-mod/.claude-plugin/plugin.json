@@ -1,6 +1,6 @@
 {
   "name": "noppomario-mod",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "noppomario's mods for Claude Code, in one plugin. Today: the mermaid code fences in Claude's replies drawn where they stand \u2014 text on the terminal, ASCII in the VS Code panel, SVG on a surface that takes one.",
   "author": {
     "name": "noppomario",
