@@ -35,14 +35,13 @@ claude plugin install noppomario-mod@noppo-claudecode-plugins
 
 ```sh
 npm install
+/plugin-types       # in a session: writes .claude/types/, the API's
+                    # declarations. Anthropic's, so not committed; write
+                    # them again after Claude Code updates
 npm run renderers   # rebuilds the committed renderer bundles
 npm run check
 CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/noppomario-mod
 ```
-
-`npm run check` needs `.claude/types/claude-code.d.ts`, the plugin API's
-declarations. Write them with `/plugin-types` in a session, and again after
-Claude Code updates — they are Anthropic's and are not committed.
 
 Edits under `hooks/` hot-reload into a running `--plugin-dir` session. The
 engine reports what it refused in the debug log (`claude --debug`).
