@@ -7,9 +7,13 @@
 // replaces the displayed text without touching the transcript or what the
 // model reads.
 //
-// It draws with `useAscii`, not box-drawing characters. A webview takes its
-// font's word for a character's width, and in a CJK monospace font the box
-// characters are two cells wide while the renderer counts them as one.
+// Box-drawing characters are East Asian Ambiguous, so a webview takes its
+// font's word for how wide they are: in a CJK monospace font they are two
+// columns where the renderer counted on one, and every row shifts. They draw
+// square where the code font has narrow glyphs for them, which on this
+// surface means `editor.fontFamily` naming one -- Adwaita Mono, say. Set
+// `useAscii` below to true for a drawing that needs no such agreement, at
+// the price of `<--->` where a diamond would be.
 //
 // It stands down wherever a surface is drawing: the hooks module sets the
 // variable below on `session.start` and `session.attach`, and the engine
@@ -43,7 +47,7 @@ if (typeof delta !== 'string' || delta === '') process.exit(0)
 
 // The event hands over the lines newly ready to draw, not the whole message,
 // so a fence still streaming has no closing ticks yet and is left alone.
-const text = withDrawings(delta, { columns: SCROLLS, useAscii: true })
+const text = withDrawings(delta, { columns: SCROLLS, useAscii: false })
 
 if (text !== delta) {
 	process.stdout.write(

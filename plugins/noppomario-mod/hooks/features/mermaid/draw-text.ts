@@ -40,13 +40,12 @@ function remember(drawn: Map<string, string>, key: string, text: string) {
  * and are served by `draw-svg`. A fence that does not parse or does not fit
  * the width keeps its source.
  *
- * It draws in ASCII rather than box-drawing characters, which costs the
- * drawing its lines and gives it `<--->` where a diamond would be. Every
- * box-drawing and geometric character is East Asian Ambiguous: whether one
- * is a column or two is the font's to decide and the terminal's to guess,
- * and where they disagree the drawing comes apart. ASCII is one column
- * everywhere, so a drawing made of it looks the same on every machine
- * without anyone agreeing to a font first.
+ * It draws with box-drawing characters. They are East Asian Ambiguous, so
+ * whether one is a column or two is the font's to decide and the terminal's
+ * to guess, and a terminal whose font draws them wide takes the drawing
+ * apart. That is a font to name once (Adwaita Mono has narrow glyphs for all
+ * of them) in exchange for lines instead of `+-|`; `useAscii: true` below
+ * needs no such agreement and gives `<--->` where a diamond would be.
  *
  * @param on the engine's registrar
  */
@@ -60,7 +59,7 @@ export function register(on: On) {
 			const columns = e.viewport?.columns ?? DEFAULT_COLUMNS
 			const key = `${columns}\n${e.props.text}`
 			const text =
-				drawn.get(key) ?? withDrawings(e.props.text, { columns, useAscii: true })
+				drawn.get(key) ?? withDrawings(e.props.text, { columns, useAscii: false })
 
 			remember(drawn, key, text)
 
