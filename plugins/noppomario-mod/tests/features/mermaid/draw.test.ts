@@ -12,7 +12,7 @@ describe('register', () => {
 		})
 
 		const ui = await $.ui.mount({
-			plugin: 'mermaid',
+			plugin: 'noppomario-mod',
 			surface: 'terminal',
 			component: 'AssistantMessage',
 			props: { text: FENCED, isFirstOfReply: true },
@@ -30,7 +30,7 @@ describe('register', () => {
 		})
 
 		const ui = await $.ui.mount({
-			plugin: 'mermaid',
+			plugin: 'noppomario-mod',
 			surface: 'terminal',
 			component: 'AssistantMessage',
 			props: { text: 'just prose', isFirstOfReply: true },

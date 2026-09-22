@@ -1,4 +1,0 @@
-{
-  "description": "Probes the ui.render contract: a marker on every AssistantMessage per surface, an Svg element behind a token, and a debug line per raised event. Needs CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1; builds without function hooks ignore the modules key.",
-  "modules": ["./register.ts"]
-}

@@ -1,0 +1,18 @@
+{
+  "name": "noppomario-mod",
+  "version": "0.3.0",
+  "description": "noppomario's mods for Claude Code, in one plugin. Today: mermaid code fences in Claude's replies drawn as box-drawing text, in place, on the terminal.",
+  "author": {
+    "name": "noppomario",
+    "url": "https://github.com/noppomario"
+  },
+  "repository": "https://github.com/noppomario/claudecode-plugins",
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "function-hooks",
+    "ui.render",
+    "mermaid",
+    "diagram"
+  ]
+}

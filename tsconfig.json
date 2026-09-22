@@ -8,8 +8,15 @@
     "skipLibCheck": true,
     "types": [],
     "paths": {
-      "claude-code": ["./vendor/claude-code.d.ts"]
-    }
+      "claude-code": [
+        "./vendor/claude-code.d.ts"
+      ]
+    },
+    "allowImportingTsExtensions": true
   },
-  "include": ["plugins/*/hooks/**/*.ts", "vendor/claude-code.d.ts"]
+  "include": [
+    "plugins/*/hooks/**/*.ts",
+    "plugins/*/tests/**/*.ts",
+    "vendor/claude-code.d.ts"
+  ]
 }

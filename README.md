@@ -1,19 +1,19 @@
 # claudecode-plugins
 
-A Claude Code plugin marketplace. The plugins here are mods: their behaviour
-lives in a hooks module that the engine loads as TypeScript and calls as
-functions, rather than in commands or MCP servers.
+A Claude Code plugin marketplace holding one plugin, `noppomario-mod`: a mod,
+meaning its behaviour lives in a hooks module that the engine loads as
+TypeScript and calls as functions, rather than in commands or MCP servers.
 
-The target surface is the VS Code extension panel, which the built-in mods do
-not cover — the shipped `mermaid` mod, for one, registers `surface: "terminal"`.
+Features go in the one plugin rather than one plugin each, because a plugin is
+the unit of install and because two plugins that rewrite the same render site
+collide — see [docs/findings.md](docs/findings.md).
 
-## Plugins
+## What it does today
 
-| Plugin | What it does |
-| --- | --- |
-| [`mermaid`](plugins/mermaid) | Draws the mermaid code fences in Claude's replies as box-drawing text, in place, on the terminal. |
-| [`ui-surface-probe`](plugins/ui-surface-probe) | Reports which `ui.render` surfaces a host raises, and whether it draws rewritten text and `Svg` elements. |
-| [`display-probe`](plugins/display-probe) | Replaces a tokened reply with a battery of rendering candidates, to see which markup a host draws. |
+Draws the mermaid code fences in Claude's replies as box-drawing text, in
+place, on the terminal, and tells the model to write fences rather than draw
+diagrams by hand. See
+[plugins/noppomario-mod](plugins/noppomario-mod/README.md).
 
 ## Requirements
 
@@ -21,7 +21,7 @@ not cover — the shipped `mermaid` mod, for one, registers `surface: "terminal"
   its own binary: check `resources/native-binary/claude --version`, not the
   `claude` on `PATH`.
 - `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`. Without it the engine ignores the
-  `modules` key in `hooks/hooks.json` and a mod loads as an inert plugin.
+  `modules` key in `hooks/hooks.json` and the mod loads as an inert plugin.
 
 Set it in `~/.claude/settings.json`:
 
@@ -37,18 +37,14 @@ Set it in `~/.claude/settings.json`:
 
 ```sh
 claude plugin marketplace add noppomario/claudecode-plugins
-node scripts/extract-renderer.mjs
-claude plugin install mermaid@noppo-claudecode-plugins
+claude plugin install noppomario-mod@noppo-claudecode-plugins
 ```
 
-From a clone, for one session:
+The mermaid feature needs a renderer that is not committed. From a clone:
 
 ```sh
-claude --plugin-dir plugins/ui-surface-probe
+node scripts/extract-renderer.mjs
 ```
-
-`--plugin-dir` is a CLI flag, so it is not available from the VS Code panel;
-install through the marketplace to test there.
 
 ## Development
 
@@ -57,15 +53,18 @@ copyrighted material and are not committed. Fetch them once:
 
 ```sh
 ./scripts/fetch-types.sh            # writes vendor/claude-code.d.ts
-node scripts/extract-renderer.mjs   # writes the mermaid mod's renderer
+node scripts/extract-renderer.mjs   # writes the mermaid feature's renderer
 bunx tsc -p tsconfig.json
-CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/mermaid
+CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/noppomario-mod
 ```
 
-Edits under a plugin's `hooks/` hot-reload into a running `--plugin-dir`
-session. The engine reports what it refused in the debug log (`claude --debug`,
-or `/status`).
+Edits under `hooks/` hot-reload into a running `--plugin-dir` session. The
+engine reports what it refused in the debug log (`claude --debug`).
+
+`dev-plugins/` holds diagnostics that are not published in the marketplace and
+are loaded with `--plugin-dir` when a question about a host needs answering.
 
 ## License
 
-MIT for the code in this repository. Nothing under `vendor/` is covered by it.
+MIT for the code in this repository. Nothing under `vendor/`, and nothing
+`scripts/extract-renderer.mjs` writes, is covered by it.

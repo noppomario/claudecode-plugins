@@ -5,8 +5,5 @@ node_modules/
 vendor/
 .claude/types/
 
-# The probe writes its journal here.
-.probe.log
-
 # Extracted from the local Claude Code binary by scripts/extract-renderer.mjs.
-plugins/mermaid/hooks/renderer.mjs
+plugins/noppomario-mod/hooks/features/mermaid/renderer.mjs

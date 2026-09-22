@@ -3,8 +3,8 @@
 //
 // The renderer is Anthropic's code, so it is not committed: it is taken from
 // the copy of Claude Code the person already runs, on their own machine, and
-// `plugins/mermaid/hooks/renderer.mjs` is ignored. Run this once after
-// cloning, and again after Claude Code updates.
+// the file it writes is ignored. Run this once after cloning, and again
+// after Claude Code updates.
 //
 // The binary is a Bun single-file executable and holds its modules as plain
 // text. The anchors below are the module's own export table, so the minified
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 import { glob } from 'node:fs/promises'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const OUT = resolve(ROOT, 'plugins/mermaid/hooks/renderer.mjs')
+const OUT = resolve(ROOT, 'plugins/noppomario-mod/hooks/features/mermaid/renderer.mjs')
 
 /** The module's description, which no other module carries. */
 const ANCHOR = 'Mermaid diagrams in the terminal'
