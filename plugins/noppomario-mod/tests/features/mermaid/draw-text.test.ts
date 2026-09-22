@@ -18,7 +18,8 @@ describe('draw-text', () => {
 			props: { text: FENCED, isFirstOfReply: true },
 		})
 
-		expect(await ui.find({ text: /┌/ })).toBeDefined()
+		// ASCII, not box drawing: the terminal draws what needs no font agreed on.
+		expect(await ui.find({ text: /\+-+\+/ })).toBeDefined()
 		expect(await ui.find({ text: /```mermaid$/ })).toBeUndefined()
 		await ui.unmount()
 	})
