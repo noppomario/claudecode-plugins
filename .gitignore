@@ -4,3 +4,6 @@ node_modules/
 # Fetch them locally with scripts/fetch-types.sh; never commit them.
 vendor/
 .claude/types/
+
+# The probe writes its journal here.
+.probe.log
