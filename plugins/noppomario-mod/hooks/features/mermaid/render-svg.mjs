@@ -5,7 +5,7 @@
 // A child process because the renderer's bundle is 1.6MB and a hooks module
 // refuses to import a file over 1,048,576 bytes.
 
-import { renderMermaidSVG } from './features/mermaid/vendor/zombie-svg.mjs'
+import { renderMermaidSVG } from './vendor/zombie-svg.mjs'
 
 let input = ''
 for await (const chunk of process.stdin) input += chunk

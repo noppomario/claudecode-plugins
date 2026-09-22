@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Draws a reply's mermaid fences where the engine draws nothing itself: the
-// VS Code panel, `claude -p`, the SDK. All run the agent as a stream-json
+// VS Code panel, `claude -p`, the SDK. Temporary in the panel's case: when
+// the extension attaches as a surface, `draw-svg.ts` takes over and this
+// file goes, along with the MessageDisplay entry in hooks.json. All run the agent as a stream-json
 // client, where `ui.render` is never raised and MessageDisplay is the only
 // way to change what is shown -- on screen alone, never the transcript.
 //

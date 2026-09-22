@@ -5,7 +5,7 @@ import { FENCE, HAS_FENCE } from './render.mjs'
 // The renderer's bundle is 1.6MB, over the 1,048,576 bytes a hooks module
 // will read, so a child process imports it instead. The limit is on what the
 // module graph reads, not on what a process the plugin starts may open.
-const CHILD = new URL('../../render-svg.mjs', import.meta.url).pathname
+const CHILD = new URL('./render-svg.mjs', import.meta.url).pathname
 
 // Naming a font also drops the webfont import the renderer would write. An
 // SVG drawn as an image loads nothing from outside itself, so a link to a
