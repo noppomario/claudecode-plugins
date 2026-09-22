@@ -58,9 +58,6 @@ CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/noppomario-mod
 Edits under `hooks/` hot-reload into a running `--plugin-dir` session. The
 engine reports what it refused in the debug log (`claude --debug`).
 
-`dev-plugins/` holds diagnostics that are not published in the marketplace and
-are loaded with `--plugin-dir` when a question about a host needs answering.
-
 ## License
 
 MIT for the code in this repository. `vendor/claude-code.d.ts` is Anthropic's
