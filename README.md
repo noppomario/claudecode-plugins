@@ -35,21 +35,19 @@ claude plugin install noppomario-mod@noppo-claudecode-plugins
 
 ```sh
 npm install
-./scripts/fetch-types.sh   # vendor/claude-code.d.ts, not committed
-npm run build              # rebuilds the committed renderer bundles
+npm run build   # rebuilds the committed renderer bundles
 npm run check
 CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/noppomario-mod
 ```
 
-`fetch-types.sh` takes the declarations from `anthropics/claude-code`. The
-accurate copy comes from `/plugin-types` in a session, which writes them from
-the running build, but that is a slash command with no CLI to call.
+`npm run check` needs `.claude/types/claude-code.d.ts`, the plugin API's
+declarations. Write them with `/plugin-types` in a session, and again after
+Claude Code updates — they are Anthropic's and are not committed.
 
 Edits under `hooks/` hot-reload into a running `--plugin-dir` session. The
 engine reports what it refused in the debug log (`claude --debug`).
 
 ## License
 
-MIT, except `vendor/claude-code.d.ts` (Anthropic's, not committed) and the
-bundles under `plugins/*/hooks/**/vendor/`, which are
+MIT, except the bundles under `plugins/*/hooks/**/vendor/`, which are
 [`zombie-mermaid`](https://github.com/dfadler/zombie-mermaid), MIT.

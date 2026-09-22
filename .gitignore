@@ -1,7 +1,4 @@
 node_modules/
 
-# Claude Code type declarations are Anthropic's copyrighted material.
-# Fetch them locally with scripts/fetch-types.sh; never commit them.
-# Anchored: a plugin's own vendor/ holds bundles that are committed.
-/vendor/
+# Written by `/plugin-types`, and Anthropic's: never committed.
 .claude/types/

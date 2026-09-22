@@ -9,7 +9,7 @@
     "types": [],
     "paths": {
       "claude-code": [
-        "./vendor/claude-code.d.ts"
+        "./.claude/types/claude-code.d.ts"
       ]
     },
     "allowImportingTsExtensions": true,
@@ -18,7 +18,7 @@
   "include": [
     "plugins/*/hooks/**/*.ts",
     "plugins/*/tests/**/*.ts",
-    "vendor/claude-code.d.ts"
+    ".claude/types/claude-code.d.ts"
   ],
   "exclude": [
     "**/vendor/zombie-*.mjs",
