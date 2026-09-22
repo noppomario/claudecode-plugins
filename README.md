@@ -48,5 +48,10 @@ engine reports what it refused in the debug log (`claude --debug`).
 
 ## License
 
-MIT, except the bundles under `plugins/*/hooks/**/vendor/`, which are
-[`zombie-mermaid`](https://github.com/dfadler/zombie-mermaid), MIT.
+MIT, except the bundles under `plugins/*/hooks/**/vendor/`. Those carry
+`zombie-mermaid` and its dependencies, each under its own licence — MIT,
+BSD-2-Clause, and EPL-2.0 for `elkjs`. The `*.LICENSE.md` beside each bundle
+lists them in full and is rebuilt with the bundle.
+
+They are bundled rather than depended on because a hooks module may import
+only its own files and Claude Code installs no dependencies for a plugin.

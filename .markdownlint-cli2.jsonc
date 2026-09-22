@@ -3,5 +3,6 @@
   "config": {
     "MD013": false
   },
-  "ignores": ["node_modules/**"]
+  // Generated, and holding third-party licence text verbatim.
+  "ignores": ["node_modules/**", "**/vendor/**"]
 }
