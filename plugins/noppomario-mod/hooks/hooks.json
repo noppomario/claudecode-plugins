@@ -1,6 +1,17 @@
 {
-  "description": "noppomario's mods. Today: mermaid fences drawn as box-drawing text on the terminal. Needs CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1; builds without function hooks ignore the modules key.",
-  "modules": [
-    "./register.ts"
-  ]
+  "description": "noppomario's mods. Today: mermaid fences drawn where Claude writes them — as text on the terminal, as vector graphics on a surface that takes them, and through MessageDisplay where the engine draws nothing itself. The modules key needs CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1; builds without function hooks ignore it and keep the MessageDisplay hook.",
+  "modules": ["./register.ts"],
+  "hooks": {
+    "MessageDisplay": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/message-display.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -10,10 +10,10 @@ collide — see [docs/findings.md](docs/findings.md).
 
 ## What it does today
 
-Draws the mermaid code fences in Claude's replies as box-drawing text, in
-place, on the terminal, and tells the model to write fences rather than draw
-diagrams by hand. See
-[plugins/noppomario-mod](plugins/noppomario-mod/README.md).
+Draws the mermaid code fences in Claude's replies where they stand — as text
+on the terminal, as ASCII in the VS Code panel, as SVG on a surface that
+takes one — and tells the model to write fences rather than draw diagrams by
+hand. See [plugins/noppomario-mod](plugins/noppomario-mod/README.md).
 
 ## Requirements
 
@@ -21,7 +21,9 @@ diagrams by hand. See
   its own binary: check `resources/native-binary/claude --version`, not the
   `claude` on `PATH`.
 - `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`. Without it the engine ignores the
-  `modules` key in `hooks/hooks.json` and the mod loads as an inert plugin.
+  `modules` key in `hooks/hooks.json`; the `MessageDisplay` hook still works,
+  so the VS Code panel is served either way.
+- `node` on `PATH` (18 or newer). Two hooks run as ordinary Node processes.
 
 Set it in `~/.claude/settings.json`:
 
@@ -40,12 +42,6 @@ claude plugin marketplace add noppomario/claudecode-plugins
 claude plugin install noppomario-mod@noppo-claudecode-plugins
 ```
 
-The mermaid feature needs a renderer that is not committed. From a clone:
-
-```sh
-node scripts/extract-renderer.mjs
-```
-
 ## Development
 
 The type declarations a hooks module is written against are Anthropic's
@@ -53,7 +49,8 @@ copyrighted material and are not committed. Fetch them once:
 
 ```sh
 ./scripts/fetch-types.sh            # writes vendor/claude-code.d.ts
-node scripts/extract-renderer.mjs   # writes the mermaid feature's renderer
+npm install                         # esbuild and the pinned renderer
+node scripts/build-renderers.mjs    # rebuilds the committed bundles
 bunx tsc -p tsconfig.json
 CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/noppomario-mod
 ```
@@ -66,5 +63,7 @@ are loaded with `--plugin-dir` when a question about a host needs answering.
 
 ## License
 
-MIT for the code in this repository. Nothing under `vendor/`, and nothing
-`scripts/extract-renderer.mjs` writes, is covered by it.
+MIT for the code in this repository. `vendor/claude-code.d.ts` is Anthropic's
+and is not committed; the bundles under `plugins/*/hooks/**/vendor/` are
+[`zombie-mermaid`](https://github.com/dfadler/zombie-mermaid), MIT, under its
+own copyright.

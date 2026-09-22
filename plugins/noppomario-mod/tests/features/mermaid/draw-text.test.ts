@@ -4,7 +4,7 @@ tier('user')
 
 const FENCED = '```mermaid\ngraph LR\n  A[One] --> B[Two]\n```'
 
-describe('register', () => {
+describe('draw-text', () => {
 	test('a mermaid fence is drawn where it stood', async ($, on) => {
 		on('ui.render', ($, e) => {
 			const { Text } = $.ui.resolve(e)
@@ -38,27 +38,5 @@ describe('register', () => {
 
 		expect(await ui.find({ text: /just prose/ })).toBeDefined()
 		await ui.unmount()
-	})
-})
-
-describe('guidance', () => {
-	test('a terminal session is told to write fences', async ($, on) => {
-		on('session.start', ($, e) => ({ cwd: e.cwd }))
-		on('prompt.context', ($, e) => ({ blocks: e.blocks }))
-
-		await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
-		const { blocks } = await $.prompt.context({ blocks: [] })
-
-		expect(blocks.map((b) => b.name)).toContain('mermaidDiagrams')
-	})
-
-	test('a session that draws nowhere is told nothing', async ($, on) => {
-		on('session.start', ($, e) => ({ cwd: e.cwd }))
-		on('prompt.context', ($, e) => ({ blocks: e.blocks }))
-
-		await $.session.start({ surface: null, isInteractive: false, cwd: '/work' })
-		const { blocks } = await $.prompt.context({ blocks: [] })
-
-		expect(blocks.map((b) => b.name)).not.toContain('mermaidDiagrams')
 	})
 })

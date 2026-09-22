@@ -13,7 +13,7 @@ const BLOCK = 'mermaidDiagrams'
  * measures every grapheme before it places anything.
  */
 const GUIDANCE = `Diagrams in your replies are drawn for you. A \`\`\`mermaid fence is laid out and
-drawn on screen as box-drawing text at the terminal's width, by a plugin, after you
+drawn on screen for the person, by a plugin, after you
 write it. The person sees the drawing; the fence itself is what you wrote.
 
 So when a reply calls for a diagram - a flow, a sequence, a state machine, a shape of
@@ -28,14 +28,14 @@ and tables are unaffected: this is about diagrams alone.`
 /**
  * Adds the guidance to the conversation's first message.
  *
+ * Unconditionally: every session draws now. A terminal and a surface with
+ * `Svg` draw through `ui.render`, and one that draws nowhere is covered by
+ * the MessageDisplay fallback.
+ *
  * @param on the engine's registrar
- * @param isDrawing whether this session draws the fences it asks for; a
- *        session that does not would trade a crooked diagram for an undrawn
- *        one, so it is told nothing
  */
-export function register(on: On, isDrawing: () => boolean) {
-	on('prompt.context', ($, e, next) => {
-		if (!isDrawing()) return next(e)
-		return next({ ...e, blocks: [...e.blocks, { name: BLOCK, text: GUIDANCE }] })
-	})
+export function register(on: On) {
+	on('prompt.context', ($, e, next) =>
+		next({ ...e, blocks: [...e.blocks, { name: BLOCK, text: GUIDANCE }] }),
+	)
 }

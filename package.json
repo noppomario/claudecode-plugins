@@ -1,0 +1,13 @@
+{
+  "name": "claudecode-plugins",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-renderers.mjs",
+    "check": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "zombie-mermaid": "2.2.6"
+  }
+}

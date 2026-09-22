@@ -103,6 +103,41 @@ out crooked, because the panel's font falls back for box-drawing glyphs and
 the fallback's advance width does not match the grid. The same text is exact
 in a terminal.
 
+## A hooks module reads no file over 1,048,576 bytes
+
+The module and everything it imports, each file:
+
+```text
+<module>: <file> is over 1048576 bytes and was not read
+```
+
+This decided where the SVG renderer runs. Its bundle is 1.6MB — 1.4MB of that
+is elkjs, the layout engine — so it cannot be imported at all. It runs in a
+child process the hook starts with `$.process.run` instead; the limit is on
+what the module graph reads, not on what a process the plugin starts may open.
+
+Two smaller findings from the same loader:
+
+- A relative dynamic `import()` **works**. A sibling `.mjs` loaded with
+  `await import('./late.mjs')` resolves at first call.
+- `import.meta.url` is a real file URL inside a hooks module, which is how a
+  hook finds a sibling script to run.
+
+## What the engine wants spelled out literally
+
+The loader reads a module's source to list what it touches, so several things
+must be literals and not variables:
+
+- `$.env.set("NAME", …)` — a variable name is refused, naming the variable
+- a matcher's `surface` — a loop over `['vscode', 'desktop'] as const`
+  registers `surface=surface`, which matches nothing
+- the hook itself — it must be a function declared at the top of its file, a
+  const bound to one there, an import, or written inline at the `on` call. A
+  const inside `register` is refused
+
+`claude plugin validate` prints what it read, which is the quickest way to
+see that a matcher resolved.
+
 ## Claude Code ships a gated mermaid mod, and it is not the whole answer
 
 Build 2.1.278 carries a built-in plugin named `mermaid`:
@@ -128,7 +163,13 @@ that does not address hand-drawn ASCII diagrams at all.
 
 The gate sits in `isAvailable`, which decides whether that plugin registers.
 It covers neither the renderer nor `ui.render`, so a plugin of one's own can
-call the same renderer today. That is what this repository does.
+call the same renderer today, which is what this repository did first — by
+carving the renderer out of the binary, since it is not published.
+
+That is no longer how it works. `zombie-mermaid` is MIT, draws the same
+diagrams correctly for CJK, draws three kinds the built-in renderer does not
+(state, class, ER), does not refuse a labelled edge that converges, and emits
+SVG as well as text. It is a dependency rather than an act of archaeology.
 
 ## Why hand-drawn diagrams come out crooked
 
@@ -148,19 +189,32 @@ characters are East Asian Ambiguous, so a terminal configured to draw
 ambiguous characters at two columns would break them — but it would break
 every box equally, which makes the condition easy to spot.
 
-## The renderer refuses a labelled edge that converges
+## Why the built-in renderer was left behind
 
-A node with more than one incoming edge cannot carry a label on any of them:
+It refuses a labelled edge that converges:
 
 ```js
 if (c.some((d, m) => d !== "" && (h[m] ?? 0) > 1)) return
 ```
 
 `h` counts incoming edges per node and `c` holds one label per node, so two
-labels landing on one node would be drawn at the same column. The renderer
-gives up on the whole diagram rather than draw it wrong, and the fence keeps
-its source.
+labels landing on one node would be drawn at the same column. It gives up on
+the whole diagram rather than draw it wrong. A `yes` and a `no` branch that
+rejoin is the commonest shape in a flowchart, so this fired often.
 
-This is common in flowcharts — a `yes` and a `no` branch that rejoin — so it
-is worth knowing that the fallback is a readable fence, not a broken drawing.
-It is unfixed here.
+It also draws only flowcharts and sequence diagrams, and only as text.
+
+## The library that replaced it, and the one it forked from
+
+`beautiful-mermaid` (11k stars) has the CJK bug this whole feature exists to
+avoid: its ASCII grid measures width in code points, so a Japanese label
+pushes the border out. Two issues report it
+([#119](https://github.com/lukilabs/beautiful-mermaid/issues/119),
+[#122](https://github.com/lukilabs/beautiful-mermaid/issues/122)) and a fix
+PR ([#128](https://github.com/lukilabs/beautiful-mermaid/pull/128)) has sat
+unmerged since June 2026. The repository has not been pushed since May.
+
+`zombie-mermaid` is a maintained fork that took the fix: it measures display
+width and writes a wide grapheme into two cells. Verified here — Japanese,
+mixed scripts, halfwidth katakana and ambiguous-width labels all come out as
+rectangles, in both box-drawing and ASCII mode.

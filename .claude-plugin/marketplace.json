@@ -9,7 +9,7 @@
     {
       "name": "noppomario-mod",
       "source": "./plugins/noppomario-mod",
-      "description": "noppomario's mods in one plugin. Today: mermaid code fences drawn as box-drawing text, in place, on the terminal."
+      "description": "noppomario's mods in one plugin. Today: mermaid code fences drawn where Claude writes them, on every surface."
     }
   ]
 }

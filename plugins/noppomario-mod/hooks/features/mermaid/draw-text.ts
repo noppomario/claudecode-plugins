@@ -1,12 +1,6 @@
 import type { On } from 'claude-code'
 
-import { withDiagrams } from './renderer.mjs'
-
-/** Only a message holding a closed mermaid fence is worth redrawing. */
-const FENCE = /^ {0,3}(?:`{3,}|~{3,})[ \t]*mermaid[ \t\r]*$/im
-
-/** The width to lay out into where the surface has not measured one. */
-const DEFAULT_COLUMNS = 80
+import { DEFAULT_COLUMNS, HAS_FENCE, withDrawings } from './render.mjs'
 
 /** What one session keeps of what it has already drawn. */
 const MAX_ENTRIES = 32
@@ -40,14 +34,11 @@ function remember(drawn: Map<string, string>, key: string, text: string) {
 }
 
 /**
- * Draws the mermaid fences of a reply where they stand.
+ * Draws the mermaid fences of a reply as text, where they stand.
  *
- * The hook is on `terminal` alone. The VS Code extension launches the agent
- * as a stream-json client, where the engine draws nowhere and `ui.render` is
- * never raised, so a hook registered there would never run.
- *
- * A fence that does not parse, does not fit the width, or throws keeps its
- * source, so a failure shows the diagram's text rather than nothing.
+ * The terminal is the only surface that takes this: the others carry `Svg`
+ * and are served by `draw-svg`. A fence that does not parse or does not fit
+ * the width keeps its source.
  *
  * @param on the engine's registrar
  */
@@ -56,15 +47,12 @@ export function register(on: On) {
 
 	on(
 		'ui.render',
-		{ component: 'AssistantMessage', surface: 'terminal', props: { text: FENCE } },
+		{ component: 'AssistantMessage', surface: 'terminal', props: { text: HAS_FENCE } },
 		($, e, next) => {
 			const columns = e.viewport?.columns ?? DEFAULT_COLUMNS
 			const key = `${columns}\n${e.props.text}`
 			const text =
-				drawn.get(key) ??
-				withDiagrams(e.props.text, columns, (outcome) =>
-					$.ui.log(`[mermaid] ${outcome} at ${columns} columns`, { to: 'debug' }),
-				)
+				drawn.get(key) ?? withDrawings(e.props.text, { columns, useAscii: false })
 
 			remember(drawn, key, text)
 

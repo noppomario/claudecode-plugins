@@ -12,11 +12,16 @@
         "./vendor/claude-code.d.ts"
       ]
     },
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "allowJs": true
   },
   "include": [
     "plugins/*/hooks/**/*.ts",
     "plugins/*/tests/**/*.ts",
     "vendor/claude-code.d.ts"
+  ],
+  "exclude": [
+    "**/vendor/zombie-*.mjs",
+    "node_modules"
   ]
 }

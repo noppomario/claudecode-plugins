@@ -2,8 +2,6 @@ node_modules/
 
 # Claude Code type declarations are Anthropic's copyrighted material.
 # Fetch them locally with scripts/fetch-types.sh; never commit them.
-vendor/
+# Anchored: a plugin's own vendor/ holds bundles that are committed.
+/vendor/
 .claude/types/
-
-# Extracted from the local Claude Code binary by scripts/extract-renderer.mjs.
-plugins/noppomario-mod/hooks/features/mermaid/renderer.mjs

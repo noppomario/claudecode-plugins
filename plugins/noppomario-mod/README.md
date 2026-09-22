@@ -6,29 +6,14 @@ one hooks module, so each feature lives under `hooks/features/<name>/` and
 
 ## mermaid
 
-Draws the mermaid code fences in Claude's replies as box-drawing text, in
-place, on the terminal.
+Draws the mermaid code fences in Claude's replies where they stand, and tells
+the model to write fences rather than draw diagrams by hand.
 
 ```text
-             ┌─────────────┐
-             │ Parse fence │
-             └──────┬──────┘
-                    │
-                    ▼
-             ┌─────────────┐
-             │ Fits width? │
-             └──────┬──────┘
-                    │
-          ┌─────────┴────────┐
-         yes                no
-          ▼                  ▼
-  ┌──────────────┐    ┌─────────────┐
-  │ Draw box art │    │ Keep source │
-  └──────────────┘    └─────────────┘
++-------------+     +-------------+     +----------+
+|Parse a fence+---->|Draw it      +---->|Show it   |
++-------------+     +-------------+     +----------+
 ```
-
-A mod: it hooks `ui.render`, so the drawing is on screen only. The transcript
-and what Claude reads keep the fence.
 
 ### Why the fence and not the diagram
 
@@ -37,46 +22,53 @@ counting display columns. A model counts characters, and a label in Japanese
 or any other wide script takes two columns per character, so a hand-drawn box
 comes out crooked — the misalignment that makes a diagram unreadable.
 
-So the mod also tells the model, once per conversation, to write diagrams as
-mermaid fences and not to hand-draw them. The arithmetic then belongs to code
-that measures every grapheme before placing anything. The guidance is added
-only where the drawing happens: a session that draws nowhere is told nothing,
-since a fence nothing draws would be worse than a crooked box.
+So the plugin tells the model, once per conversation, to write diagrams as
+mermaid fences. The arithmetic then belongs to code that measures every
+grapheme before placing anything.
+
+### Where it draws
+
+| Surface | How | What |
+| --- | --- | --- |
+| Terminal | `ui.render` | Box-drawing text |
+| Editor, desktop, mobile | `ui.render` | SVG |
+| A session that draws nowhere | `MessageDisplay` | ASCII text |
+
+The VS Code extension runs the agent as a stream-json client, where the
+engine draws nowhere and `ui.render` is never raised. So the panel is served
+by the `MessageDisplay` fallback today, and the SVG path sits dormant and
+starts working the day the extension attaches as a surface — no change here.
+
+Only one of them draws at a time: the hooks module sets an environment
+variable when a surface attaches, and the fallback stands down when it sees
+it.
+
+The fallback draws with `- | +` rather than `─ │ ┌`. Box-drawing characters
+are East Asian Ambiguous, and a webview takes its font's word for their
+width: in a CJK monospace font they are two cells wide while the renderer
+counts them as one. ASCII is one cell in every monospace font.
 
 ### The renderer
 
-The drawing itself is Claude Code's own Mermaid renderer, which ships inside
-the binary as a built-in plugin that is gated off by default. This mod calls
-that renderer from a hook of its own, which no gate covers.
-
-The renderer is Anthropic's code, so it is not committed. It is taken from
-the copy of Claude Code on the machine that runs it:
+[`zombie-mermaid`](https://github.com/dfadler/zombie-mermaid), MIT, bundled
+into `hooks/features/mermaid/vendor/`. A hooks module may import only its own
+files, and Claude Code installs no dependencies for a plugin, so the bundles
+are committed. Rebuild them after changing the pinned version:
 
 ```sh
-node scripts/extract-renderer.mjs           # finds the binary itself
-node scripts/extract-renderer.mjs /path/to/claude
+npm install
+node scripts/build-renderers.mjs
 ```
 
-Run from the repository root, not from this folder.
-
-The script reads the module's own export table rather than assuming minified
-names, and refuses to write a slice that does not draw. Run it again after
-Claude Code updates.
+The SVG bundle is 1.6MB, over the 1,048,576 bytes a hooks module will read,
+so `hooks/render-svg.mjs` draws in a child process instead. That needs
+`node` on `PATH`, as does the `MessageDisplay` fallback.
 
 ### What it draws
 
-`flowchart` and `graph` in all four directions, and `sequenceDiagram`. A
-fence keeps its source when it is not one of those, does not parse, throws,
-or lays out wider than the terminal — a failure shows the diagram's text
-rather than nothing.
-
-### Surfaces
-
-`terminal` only, and deliberately. The VS Code extension launches the agent
-as a stream-json client: the engine draws nowhere, `session.start` reports
-`surface=null`, and `ui.render` is never raised, so a hook registered for
-`vscode` would never run. That surface needs the `MessageDisplay` route
-instead.
+flowchart, sequenceDiagram, stateDiagram, classDiagram and erDiagram. A fence
+keeps its source when it does not parse or lays out wider than the terminal —
+a failure shows the diagram's text rather than nothing.
 
 ### Tests
 
@@ -84,13 +76,11 @@ instead.
 CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/noppomario-mod
 ```
 
-`tests/features/mermaid/draw.test.ts` mounts `AssistantMessage` through the
-plugin on the terminal surface and reads the drawing back, so it exercises
-the hook against the engine rather than against a copy of it.
+`draw-text.test.ts` and `draw-svg.test.ts` mount `AssistantMessage` through
+the plugin on a named surface and read the drawing back, so they exercise the
+hooks against the engine. The SVG tests name surfaces nothing raises today,
+which is how that path is held to its contract before it can run.
 
-`tests/features/mermaid/renderer.test.ts` guards the extraction instead: a
-Claude Code update can move what `scripts/extract-renderer.mjs` slices, and a
-renderer that draws crooked boxes is worse than one that does not draw, since
-crooked boxes are the whole complaint. It checks that labels in Japanese,
-mixed scripts, halfwidth katakana and ambiguous-width characters all come out
-as rectangles, and that a label it cannot measure is refused.
+`renderer.test.ts` guards the bundle: a renderer that draws crooked boxes is
+worse than one that does not draw, since crooked boxes are the complaint this
+feature exists to answer.
