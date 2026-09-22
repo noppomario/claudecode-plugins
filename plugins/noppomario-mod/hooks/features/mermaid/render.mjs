@@ -16,11 +16,22 @@ export const HAS_FENCE = /^[ \t]{0,3}(?:`{3,}|~{3,})[ \t]*mermaid[ \t\r]*$/im
 export const DEFAULT_COLUMNS = 80
 
 /**
+ * How tightly to draw.
+ *
+ * A transcript is read by scrolling, so height is what a diagram costs. The
+ * renderer's own spacing leaves five rows between ranks; three is the least
+ * that still puts an edge's label below the box it leaves, rather than on its
+ * border. `boxBorderPadding: 0` costs a label its breathing room but saves
+ * two rows per box, which is the better trade at this size.
+ */
+const LAYOUT = { boxBorderPadding: 0, paddingY: 3 }
+
+/**
  * East Asian Wide and Fullwidth: the characters a terminal draws in two cells.
  * Halfwidth katakana (U+FF61-FF9F) is outside it deliberately — it is narrow.
  */
 const WIDE =
-	/[ᄀ-ᅟ〈〉⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏ꥠ-꥿가-힣豈-﫿︐-︙︰-﹯＀-｠￠-￦]/
+	/[\u1100-\u115F\u2329\u232A\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA000-\uA4CF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/
 
 /**
  * @param {string} line one line of a drawing
@@ -47,9 +58,7 @@ export const displayWidth = (line) =>
 export function drawing(source, { columns, useAscii }) {
 	let text
 	try {
-		text = String(
-			renderMermaidASCII(source, { colorMode: 'none', boxBorderPadding: 0, useAscii }),
-		)
+		text = String(renderMermaidASCII(source, { colorMode: 'none', ...LAYOUT, useAscii }))
 	} catch {
 		return null
 	}
