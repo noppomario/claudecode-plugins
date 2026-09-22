@@ -12,6 +12,7 @@ not cover — the shipped `mermaid` mod, for one, registers `surface: "terminal"
 | Plugin | What it does |
 | --- | --- |
 | [`ui-surface-probe`](plugins/ui-surface-probe) | Reports which `ui.render` surfaces a host raises, and whether it draws rewritten text and `Svg` elements. |
+| [`display-probe`](plugins/display-probe) | Replaces a tokened reply with a battery of rendering candidates, to see which markup a host draws. |
 
 ## Requirements
 

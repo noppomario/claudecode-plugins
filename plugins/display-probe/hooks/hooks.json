@@ -1,0 +1,16 @@
+{
+  "description": "MessageDisplay: replaces a reply carrying the probe token with a battery of rendering candidates.",
+  "hooks": {
+    "MessageDisplay": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/message-display.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
