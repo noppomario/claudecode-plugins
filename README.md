@@ -34,14 +34,20 @@ claude plugin install noppomario-mod@noppo-claudecode-plugins
 ## Development
 
 ```sh
-npm install
-/plugin-types       # in a session: writes .claude/types/, the API's
-                    # declarations. Anthropic's, so not committed; write
-                    # them again after Claude Code updates
-npm run renderers   # rebuilds the committed renderer bundles
+npm ci --ignore-scripts   # exactly the lockfile, and no install scripts run
+/plugin-types             # in a session: writes .claude/types/, the API's
+                          # declarations. Anthropic's, so not committed;
+                          # write them again after Claude Code updates
+npm run renderers         # rebuilds the committed renderer bundles
 npm run check
 CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/noppomario-mod
 ```
+
+`npm ci` rather than `npm install`: it installs the lockfile as it stands and
+fails if `package.json` has drifted from it, where `install` would quietly
+resolve something new. `--ignore-scripts` stops a dependency running code at
+install time; esbuild's postinstall only checks the platform binary that its
+optional dependency already carries, so it is not needed here.
 
 Edits under `hooks/` hot-reload into a running `--plugin-dir` session. The
 engine reports what it refused in the debug log (`claude --debug`).

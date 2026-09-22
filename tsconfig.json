@@ -1,27 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
+    "target": "es2023",
+    "lib": ["es2023"],
+    "types": [],
+    "module": "esnext",
     "moduleResolution": "bundler",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": [],
-    "paths": {
-      "claude-code": [
-        "./.claude/types/claude-code.d.ts"
-      ]
-    },
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment",
     "allowImportingTsExtensions": true,
     "allowJs": true
   },
-  "include": [
-    "plugins/*/hooks/**/*.ts",
-    "plugins/*/tests/**/*.ts",
-    ".claude/types/claude-code.d.ts"
-  ],
-  "exclude": [
-    "**/vendor/zombie-*.mjs",
-    "node_modules"
-  ]
+  "include": [".claude/types", "plugins/*/hooks", "plugins/*/tests"],
+  "exclude": ["**/vendor/zombie-*.mjs"]
 }

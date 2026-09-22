@@ -39,7 +39,7 @@ files and Claude Code installs no dependencies for a plugin, so the bundles are
 committed. Rebuild after changing the pinned version:
 
 ```sh
-npm install
+npm ci --ignore-scripts
 npm run renderers
 ```
 
