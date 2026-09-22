@@ -1,0 +1,6 @@
+node_modules/
+
+# Claude Code type declarations are Anthropic's copyrighted material.
+# Fetch them locally with scripts/fetch-types.sh; never commit them.
+vendor/
+.claude/types/

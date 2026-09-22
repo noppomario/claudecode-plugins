@@ -1,0 +1,6 @@
+{
+  // Line length is left to the editor's wrapping.
+  "config": {
+    "MD013": false
+  }
+}

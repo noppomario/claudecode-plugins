@@ -1,0 +1,15 @@
+{
+  "name": "noppo-claudecode-plugins",
+  "owner": {
+    "name": "noppomario",
+    "url": "https://github.com/noppomario"
+  },
+  "description": "Claude Code plugins and mods by noppomario, aimed at the VS Code extension surface.",
+  "plugins": [
+    {
+      "name": "ui-surface-probe",
+      "source": "./plugins/ui-surface-probe",
+      "description": "Diagnostic mod: reports which ui.render surfaces fire and whether the VS Code panel draws rewritten text and Svg elements."
+    }
+  ]
+}
