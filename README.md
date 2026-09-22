@@ -11,6 +11,7 @@ not cover — the shipped `mermaid` mod, for one, registers `surface: "terminal"
 
 | Plugin | What it does |
 | --- | --- |
+| [`mermaid`](plugins/mermaid) | Draws the mermaid code fences in Claude's replies as box-drawing text, in place, on the terminal. |
 | [`ui-surface-probe`](plugins/ui-surface-probe) | Reports which `ui.render` surfaces a host raises, and whether it draws rewritten text and `Svg` elements. |
 | [`display-probe`](plugins/display-probe) | Replaces a tokened reply with a battery of rendering candidates, to see which markup a host draws. |
 
@@ -36,7 +37,8 @@ Set it in `~/.claude/settings.json`:
 
 ```sh
 claude plugin marketplace add noppomario/claudecode-plugins
-claude plugin install ui-surface-probe@noppo-claudecode-plugins
+node scripts/extract-renderer.mjs
+claude plugin install mermaid@noppo-claudecode-plugins
 ```
 
 From a clone, for one session:
@@ -54,8 +56,10 @@ The type declarations a hooks module is written against are Anthropic's
 copyrighted material and are not committed. Fetch them once:
 
 ```sh
-./scripts/fetch-types.sh   # writes vendor/claude-code.d.ts
+./scripts/fetch-types.sh            # writes vendor/claude-code.d.ts
+node scripts/extract-renderer.mjs   # writes the mermaid mod's renderer
 bunx tsc -p tsconfig.json
+CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin test plugins/mermaid
 ```
 
 Edits under a plugin's `hooks/` hot-reload into a running `--plugin-dir`

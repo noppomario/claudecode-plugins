@@ -1,0 +1,4 @@
+{
+  "description": "Replaces closed mermaid fences in an assistant message with their drawing, on the terminal surface. Needs CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1; builds without function hooks ignore the modules key.",
+  "modules": ["./register.ts"]
+}
