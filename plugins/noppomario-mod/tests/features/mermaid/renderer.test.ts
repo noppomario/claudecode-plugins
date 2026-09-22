@@ -95,3 +95,23 @@ describe('label padding', () => {
 		expect(drawn).toContain('配列 [0] を読む')
 	})
 })
+
+describe('ascii mode', () => {
+	for (const [name, source] of [
+		['flowchart', 'flowchart TD\n  A([start]) --> B{choose}\n  B -->|y| C((done))'],
+		['state', 'stateDiagram-v2\n  [*] --> Pending\n  Pending --> [*]: done'],
+		['sequence', 'sequenceDiagram\n  participant A\n  participant B\n  A->>B: req'],
+		['class', 'classDiagram\n  class Order {\n    +int id\n  }'],
+		['er', 'erDiagram\n  CUSTOMER ||--o{ ORDER : places'],
+	] as const) {
+		test(`a ${name} drawn for a webview is ASCII alone`, async () => {
+			// The renderer leaves a `‖` in a state diagram's end marker even in
+			// this mode, and that character is East Asian Ambiguous: a webview's
+			// CJK font draws it two columns wide and the row shifts.
+			const drawn = drawing(source, { columns: Number.POSITIVE_INFINITY, useAscii: true }) ?? ''
+
+			expect(drawn).not.toBe('')
+			expect(/[^\x00-\x7F]/u.test(drawn)).toBe(false)
+		})
+	}
+})

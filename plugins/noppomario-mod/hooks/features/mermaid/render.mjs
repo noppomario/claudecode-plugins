@@ -63,6 +63,26 @@ const LABEL = /(?<=[\p{L}\p{N}_])(\[\[|\(\(|\(\[|\{|\[|\()([^\]})\n"|]+)(\]\]|\)
 const padded = (source) => source.replace(LABEL, '$1  $2  $3')
 
 /**
+ * Characters `useAscii` leaves behind, and what stands in for them.
+ *
+ * The mode is meant to emit nothing outside ASCII, and a state diagram's end
+ * marker comes out as `\u2016` anyway. That character is East Asian
+ * Ambiguous, so a webview's CJK monospace font draws it two columns wide
+ * while the renderer counted on one, and the row it sits in shifts.
+ *
+ * One character for one character, so nothing moves: a substitution is safe
+ * here in a way that inserting a space never is.
+ */
+const NOT_ASCII = new Map([['\u2016', '|']])
+
+/**
+ * @param {string} drawn a drawing made with `useAscii`
+ * @returns {string} the same drawing, in ASCII alone
+ */
+const asciiOnly = (drawn) =>
+	drawn.replace(/[^\x00-\x7F]/gu, (ch) => NOT_ASCII.get(ch) ?? ch)
+
+/**
  * East Asian Wide and Fullwidth: the characters a terminal draws in two cells.
  * Halfwidth katakana (U+FF61-FF9F) is outside it deliberately — it is narrow.
  */
@@ -99,7 +119,9 @@ export function drawing(source, { columns, useAscii }) {
 		return null
 	}
 
-	const lines = text.split('\n').map((line) => line.replace(/[ \t]+$/, ''))
+	const lines = (useAscii ? asciiOnly(text) : text)
+		.split('\n')
+		.map((line) => line.replace(/[ \t]+$/, ''))
 	while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
 	if (lines.length === 0) return null
 	if (lines.some((line) => displayWidth(line) > columns)) return null
